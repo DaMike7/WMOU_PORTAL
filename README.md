@@ -21,12 +21,6 @@ A comprehensive web-based platform for managing academic activities, course regi
 - [API Documentation](#api-documentation)
 - [Usage](#usage)
 - [Project Structure](#project-structure)
-- [Security](#security)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Contributing](#contributing)
-- [License](#license)
-- [Support](#support)
 
 ## 🎯 Overview
 

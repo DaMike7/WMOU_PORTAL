@@ -1,16 +1,31 @@
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 class Settings(BaseSettings):
-    SUPABASE_URL: str
-    SUPABASE_KEY: str
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    PAYSTACK_SECRET_KEY: Optional[str] = None
+    # Supabase
+    supabase_url: str
+    supabase_key: str
+    
+    # Security
+    secret_key: str
+    algorithm: str = "HS256"
+    access_token_expire_days: int = 7
+    
+    # Cloudinary
+    cloudinary_cloud_name: str
+    cloudinary_api_key: str
+    cloudinary_api_secret: str
+    
+    # Email (Optional)
+    smtp_host: str = "smtp.gmail.com"
+    smtp_port: int = 587
+    smtp_user: str = ""
+    smtp_password: str = ""
+    
+    # Application
+    app_name: str = "School Portal"
+    default_password: str = "1234567"
     
     class Config:
         env_file = ".env"
-        case_sensitive = True
 
 settings = Settings()

@@ -8,7 +8,10 @@ charset-normalizer==3.4.4
 click==8.3.1
 cryptography==46.0.3
 deprecation==2.1.0
+dnspython==2.8.0
 ecdsa==0.19.1
+email-validator==2.3.0
+et_xmlfile==2.0.0
 fastapi==0.122.0
 h11==0.16.0
 h2==4.3.0
@@ -19,6 +22,7 @@ httpx==0.28.1
 hyperframe==6.1.0
 idna==3.11
 multidict==6.7.0
+openpyxl==3.1.5
 packaging==25.0
 passlib==1.7.4
 paystack==1.5.0
@@ -31,7 +35,7 @@ pydantic-settings==2.12.0
 pydantic_core==2.41.5
 PyJWT==2.10.1
 python-dotenv==1.2.1
-python-jose==3.5.0
+python-jose==3.3.0
 python-multipart==0.0.20
 PyYAML==6.0.3
 realtime==2.24.0
