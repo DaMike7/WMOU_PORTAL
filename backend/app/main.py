@@ -39,7 +39,7 @@ cloudinary.config(
 )
 
 # Security
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
@@ -83,7 +83,7 @@ class UserCreate(BaseModel):
     department: str
     phone: Optional[str] = None
     role: UserRole = UserRole.STUDENT
-    password: str = "1234567"
+    password: os.getenv("default_password")
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -386,7 +386,7 @@ async def upload_payment_proof(
 ):
     """Student uploads payment receipt"""
     # Upload to Cloudinary
-    upload_result = cloudinary.uploader.upload(file.file, folder="payment_receipts")
+    upload_result = cloudinary.uploader.upload(file.file, folder="wmou_portal/payment_receipts")
     
     # Create payment record
     payment_data = {
@@ -467,7 +467,7 @@ async def upload_material(
     # Upload to Cloudinary
     upload_result = cloudinary.uploader.upload(
         file.file,
-        folder="course_materials",
+        folder="wmou_portal/course_materials",
         resource_type="auto"
     )
     
@@ -592,7 +592,7 @@ async def upload_profile_picture(
     # Upload to Cloudinary
     upload_result = cloudinary.uploader.upload(
         file.file,
-        folder="profile_pictures",
+        folder="wmou/profile_pictures",
         transformation=[{"width": 400, "height": 400, "crop": "fill"}]
     )
     
@@ -678,6 +678,13 @@ async def get_student_dashboard(current_user: dict = Depends(get_current_user)):
         .eq("student_id", current_user["id"])\
         .eq("status", PaymentStatus.PENDING)\
         .execute()
+
+    # Pending payments
+    approved = supabase.table("course_payments")\
+        .select("id", count="exact")\
+        .eq("student_id", current_user["id"])\
+        .eq("status", PaymentStatus.APPROVED)\
+        .execute()
     
     # Latest results
     latest_results = supabase.table("results")\
@@ -692,6 +699,7 @@ async def get_student_dashboard(current_user: dict = Depends(get_current_user)):
     return {
         "registered_courses": registered.count,
         "pending_payments": pending.count,
+        "approved_payments": approved.count,
         "gpa": gpa,
         "recent_results": latest_results.data
     }

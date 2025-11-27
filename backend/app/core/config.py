@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     
     # Application
     app_name: str = "School Portal"
-    default_password: str = "1234567"
+    default_password: str = ""
     
     class Config:
         env_file = ".env"

@@ -225,23 +225,6 @@ const NavSideBar = ({
           onClick={() => setIsMobileMenuOpen(false)}
         />
       )}
-
-      {/* Main Content Area (Example) */}
-      <main className={`
-        pt-16 transition-all duration-300
-        ${isSidebarOpen ? 'lg:pl-64' : 'lg:pl-20'}
-      `}>
-        <div className="p-6">
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-            <h2 className="text-2xl font-bold text-[#1e3a5f] mb-2">
-              Welcome to {currentPage}
-            </h2>
-            <p className="text-gray-600">
-              This is your main content area. Import the NavSideBar component into any page.
-            </p>
-          </div>
-        </div>
-      </main>
     </div>
   );
 };
