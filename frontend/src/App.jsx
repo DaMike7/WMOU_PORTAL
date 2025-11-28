@@ -21,7 +21,7 @@ import StudentCoursesPage from './pages/student/CoursesPage';
 import StudentPaymentsPage from './pages/student/PaymentsPage';
 import StudentMaterialsPage from './pages/student/MaterialsPage';
 import StudentResultsPage from './pages/student/ResultsPage';
-import ProfilePage from './pages/student/ProfilePage';
+import ProfilePage from './pages/student/PorfilePage';
 
 // Components
 import ProtectedRoute from './components/common/ProtectedRoute';

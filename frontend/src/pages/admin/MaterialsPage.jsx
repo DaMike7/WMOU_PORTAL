@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from './AdminLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import { materialService } from '../../services/materialService';
@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { Upload, Trash2, Download, FileText } from 'lucide-react';
 import { formatDateTime } from '../../utils/helpers';
 
-export default function MaterialsPage() {
+const MaterialsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [formData, setFormData] = useState({
@@ -253,3 +253,4 @@ export default function MaterialsPage() {
     </AdminLayout>
   );
 }
+export default MaterialsPage

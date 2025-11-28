@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from './AdminLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import { announcementService } from '../../services/announcementService';

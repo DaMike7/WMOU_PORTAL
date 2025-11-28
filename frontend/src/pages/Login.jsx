@@ -5,7 +5,7 @@ import { toast } from 'react-hot-toast';
 import { LogIn } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 
-export default function Login() {
+const Login = () => {
   const [regNo, setRegNo] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -108,3 +108,5 @@ export default function Login() {
     </div>
   );
 }
+
+export default Login

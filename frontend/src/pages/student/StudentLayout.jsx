@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import Navbar from '../common/Navbar';
+import Navbar from '../../components/common/Navbar';
 import {
   LayoutDashboard,
   BookOpen,
@@ -10,7 +10,7 @@ import {
   User,
 } from 'lucide-react';
 
-export default function StudentLayout({ children }) {
+const StudentLayout = ({ children }) => {
   const location = useLocation();
 
   const menuItems = [
@@ -56,3 +56,4 @@ export default function StudentLayout({ children }) {
     </div>
   );
 }
+export default StudentLayout 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import StudentLayout from '../../components/student/StudentLayout';
+import StudentLayout from './StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import { authService } from '../../services/authService';
@@ -8,7 +8,7 @@ import { useAuthStore } from '../../store/authStore';
 import { toast } from 'react-hot-toast';
 import { User, Camera, Lock } from 'lucide-react';
 
-export default function ProfilePage() {
+const ProfilePage = () =>{
   const { user, updateUser } = useAuthStore();
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
@@ -323,3 +323,4 @@ export default function ProfilePage() {
     </StudentLayout>
   );
 }
+export default ProfilePage;

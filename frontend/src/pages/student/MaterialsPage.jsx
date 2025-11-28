@@ -1,14 +1,14 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import StudentLayout from '../../components/student/StudentLayout';
+import StudentLayout from './StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
-import { courseService } from '../../services/courseService';
-import { materialService } from '../../services/materialService';
+import { courseService } from '../../services/courseService.js';
+import { materialService } from '../../services/materialService.js';
 import { Download, FileText, Folder } from 'lucide-react';
 import { formatDateTime } from '../../utils/helpers';
 
-export default function MaterialsPage() {
+const MaterialsPage = () => {
   const { data: registrations, isLoading } = useQuery({
     queryKey: ['registeredCourses'],
     queryFn: courseService.getRegisteredCourses,
@@ -102,3 +102,4 @@ function CourseMaterialsCard({ registration }) {
     </div>
   );
 }
+export default MaterialsPage

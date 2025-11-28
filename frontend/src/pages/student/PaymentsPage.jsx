@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import StudentLayout from '../../components/student/StudentLayout';
+import StudentLayout from './StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
@@ -10,7 +10,7 @@ import { Receipt, Eye } from 'lucide-react';
 import { useState } from 'react';
 import Modal from '../../components/common/Modal';
 
-export default function PaymentsPage() {
+const PaymentsPage = () =>{
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
   const { data: registrations, isLoading } = useQuery({
@@ -130,3 +130,4 @@ export default function PaymentsPage() {
     </StudentLayout>
   );
 }
+export default PaymentsPage

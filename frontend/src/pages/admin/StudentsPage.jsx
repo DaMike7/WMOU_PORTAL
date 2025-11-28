@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from './AdminLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { UserPlus, Search } from 'lucide-react';
 import { DEPARTMENTS, STUDENT_STATUS } from '../../utils/constants';
 
-export default function StudentsPage() {
+const StudentsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
@@ -269,3 +269,4 @@ export default function StudentsPage() {
     </AdminLayout>
   );
 }
+export default StudentsPage

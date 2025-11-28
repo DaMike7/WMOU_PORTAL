@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import StudentLayout from '../../components/student/StudentLayout';
+import StudentLayout from './StudentLayout';
 import StatCard from '../../components/common/StatCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { dashboardService } from '../../services/dashboardService';
@@ -8,7 +8,7 @@ import { announcementService } from '../../services/announcementService';
 import { BookOpen, Clock, TrendingUp, Megaphone } from 'lucide-react';
 import { getGradeColor, formatDateTime } from '../../utils/helpers';
 
-export default function StudentDashboard() {
+const StudentDashboard = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['studentDashboard'],
     queryFn: dashboardService.getStudentDashboard,
@@ -117,3 +117,5 @@ export default function StudentDashboard() {
     </StudentLayout>
   );
 }
+
+export default StudentDashboard;

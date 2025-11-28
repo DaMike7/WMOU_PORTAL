@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import StudentLayout from '../../components/student/StudentLayout';
+import StudentLayout from './StudentLayout'
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
@@ -10,7 +10,7 @@ import { formatCurrency } from '../../utils/helpers';
 import { SESSIONS, SEMESTERS } from '../../utils/constants';
 import { BookOpen } from 'lucide-react';
 
-export default function CoursesPage() {
+const CoursesPage = () => {
   const { user } = useAuthStore();
   const [session, setSession] = useState('2025/2026');
   const [semester, setSemester] = useState('First Semester');
@@ -174,3 +174,4 @@ export default function CoursesPage() {
     </StudentLayout>
   );
 }
+export default CoursesPage

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import StudentLayout from '../../components/student/StudentLayout';
+import StudentLayout from './StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import { resultService } from '../../services/resultService';
@@ -8,7 +8,7 @@ import { Award, TrendingUp } from 'lucide-react';
 import { getGradeColor } from '../../utils/helpers';
 import { SESSIONS, SEMESTERS } from '../../utils/constants';
 
-export default function ResultsPage() {
+const ResultsPage = () => {
   const [session, setSession] = useState('2025/2026');
   const [semester, setSemester] = useState('First Semester');
 
@@ -140,3 +140,4 @@ export default function ResultsPage() {
     </StudentLayout>
   );
 }
+export default ResultsPage;

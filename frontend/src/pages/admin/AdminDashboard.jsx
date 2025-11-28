@@ -1,6 +1,6 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from './AdminLayout';
 import StatCard from '../../components/common/StatCard';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { dashboardService } from '../../services/dashboardService';

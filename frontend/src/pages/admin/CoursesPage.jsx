@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from './AdminLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import { courseService } from '../../services/courseService';
@@ -9,7 +9,7 @@ import { BookOpen, Plus, Pencil, Trash2 } from 'lucide-react';
 import { DEPARTMENTS, SESSIONS, SEMESTERS } from '../../utils/constants';
 import { formatCurrency } from '../../utils/helpers';
 
-export default function CoursesPage() {
+const CoursesPage = () =>{
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [formData, setFormData] = useState({
@@ -344,3 +344,5 @@ export default function CoursesPage() {
     </AdminLayout>
   );
 }
+
+export default CoursesPage

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import AdminLayout from '../../components/admin/AdminLayout';
+import AdminLayout from './AdminLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
@@ -9,7 +9,7 @@ import { toast } from 'react-hot-toast';
 import { CheckCircle, XCircle, Eye } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 
-export default function PaymentsPage() {
+const PaymentsPage = () =>{
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
@@ -267,3 +267,4 @@ export default function PaymentsPage() {
     </AdminLayout>
   );
 }
+export default PaymentsPage
