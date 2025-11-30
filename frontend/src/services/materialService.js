@@ -1,8 +1,10 @@
 import api from './api';
 
 export const materialService = {
-  getCourseMaterials: async (courseId) => {
-    const response = await api.get(`/api/student/materials/${courseId}`);
+  getCourseMaterials: async (courseId, page = 1, limit = 20) => {
+    const response = await api.get(`/api/student/materials/${courseId}`, {
+      params: { page, limit },
+    });
     return response.data;
   },
 
@@ -19,8 +21,10 @@ export const materialService = {
     return response.data;
   },
 
-  getAllMaterials: async () => {
-    const response = await api.get('/api/admin/materials');
+  getAllMaterials: async (page = 1, limit = 20) => {
+    const response = await api.get('/api/admin/materials', {
+      params: { page, limit },
+    });
     return response.data;
   },
 

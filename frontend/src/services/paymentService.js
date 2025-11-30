@@ -14,8 +14,9 @@ export const paymentService = {
     return response.data;
   },
 
-  getAllPayments: async (status) => {
-    const params = status ? { status } : {};
+  getAllPayments: async (status, page = 1, limit = 30) => {
+    const params = { page, limit };
+    if (status) params.status = status;
     const response = await api.get('/api/admin/payments', { params });
     return response.data;
   },

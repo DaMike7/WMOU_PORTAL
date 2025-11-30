@@ -6,8 +6,9 @@ export const userService = {
     return response.data;
   },
 
-  getAllUsers: async (role) => {
-    const params = role ? { role } : {};
+  getAllUsers: async (role, page = 1, limit = 50) => {
+    const params = { page, limit };
+    if (role) params.role = role;
     const response = await api.get('/api/admin/users', { params });
     return response.data;
   },

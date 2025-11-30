@@ -1,8 +1,8 @@
 import api from './api';
 
 export const courseService = {
-  getCourses: async (session, semester) => {
-    const params = {};
+  getCourses: async (session, semester, page = 1, limit = 20) => {
+    const params = { page, limit };
     if (session) params.session = session;
     if (semester) params.semester = semester;
     const response = await api.get('/api/courses', { params });
@@ -16,8 +16,10 @@ export const courseService = {
     return response.data;
   },
 
-  getRegisteredCourses: async () => {
-    const response = await api.get('/api/student/registered-courses');
+  getRegisteredCourses: async (page = 1, limit = 20) => {
+    const response = await api.get('/api/student/registered-courses', {
+      params: { page, limit },
+    });
     return response.data;
   },
 

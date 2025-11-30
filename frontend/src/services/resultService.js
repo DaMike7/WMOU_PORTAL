@@ -1,8 +1,8 @@
 import api from './api';
 
 export const resultService = {
-  getStudentResults: async (session, semester) => {
-    const params = {};
+  getStudentResults: async (session, semester, page = 1, limit = 50) => {
+    const params = { page, limit };
     if (session) params.session = session;
     if (semester) params.semester = semester;
     const response = await api.get('/api/student/results', { params });

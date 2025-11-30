@@ -6,12 +6,13 @@ import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
-import { UserPlus, Search } from 'lucide-react';
-import { DEPARTMENTS, STUDENT_STATUS } from '../../utils/constants';
+import { UserPlus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { DEPARTMENTS } from '../../utils/constants';
 
 const StudentsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState({
     reg_no: '',
     email: '',
@@ -22,9 +23,9 @@ const StudentsPage = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: students, isLoading } = useQuery({
-    queryKey: ['students'],
-    queryFn: () => userService.getAllUsers('student'),
+  const { data: studentsData, isLoading } = useQuery({
+    queryKey: ['students', currentPage],
+    queryFn: () => userService.getAllUsers('student', currentPage, 50),
   });
 
   const createMutation = useMutation({
@@ -59,7 +60,7 @@ const StudentsPage = () => {
     createMutation.mutate({ ...formData, role: 'student' });
   };
 
-  const filteredStudents = students?.filter(
+  const filteredStudents = studentsData?.data?.filter(
     (student) =>
       student.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       student.reg_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -77,7 +78,12 @@ const StudentsPage = () => {
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Students</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Students</h1>
+          <p className="text-gray-500 mt-1">
+            Total: {studentsData?.total || 0} students
+          </p>
+        </div>
         <button onClick={() => setShowModal(true)} className="btn-primary">
           <UserPlus className="h-4 w-4 mr-2" />
           Add Student
@@ -127,16 +133,16 @@ const StudentsPage = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredStudents?.map((student) => (
                 <tr key={student.id} className="table-row">
-                  <td className="px-6 py-4 whitespace-nowrap font-mono">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm">
                     {student.reg_no}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap font-medium">
                     {student.full_name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {student.email}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {student.department}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -151,7 +157,7 @@ const StudentsPage = () => {
                           status: e.target.value,
                         })
                       }
-                      className="text-sm border border-gray-300 rounded px-2 py-1"
+                      className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
                     >
                       <option value="active">Active</option>
                       <option value="suspended">Suspended</option>
@@ -163,92 +169,119 @@ const StudentsPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {studentsData?.total_pages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {studentsData.total_pages}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(studentsData.total_pages, p + 1))}
+                disabled={currentPage === studentsData.total_pages}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add Student Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New Student">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Registration Number *
-            </label>
-            <input
-              type="text"
-              value={formData.reg_no}
-              onChange={(e) =>
-                setFormData({ ...formData, reg_no: e.target.value })
-              }
-              className="input"
-              required
-            />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Registration Number *
+              </label>
+              <input
+                type="text"
+                value={formData.reg_no}
+                onChange={(e) => setFormData({ ...formData, reg_no: e.target.value })}
+                className="input"
+                placeholder="e.g., STU/2024/001"
+                required
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Full Name *
+              </label>
+              <input
+                type="text"
+                value={formData.full_name}
+                onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                className="input"
+                placeholder="Enter student's full name"
+                required
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Email Address *
+              </label>
+              <input
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                className="input"
+                placeholder="student@example.com"
+                required
+              />
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Department *
+              </label>
+              <select
+                value={formData.department}
+                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+                className="input"
+                required
+              >
+                <option value="">Select Department</option>
+                {DEPARTMENTS.map((dept) => (
+                  <option key={dept} value={dept}>
+                    {dept}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="col-span-2">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className="input"
+                placeholder="+234 XXX XXX XXXX"
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Full Name *
-            </label>
-            <input
-              type="text"
-              value={formData.full_name}
-              onChange={(e) =>
-                setFormData({ ...formData, full_name: e.target.value })
-              }
-              className="input"
-              required
-            />
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> Default password will be set to <code className="bg-blue-100 px-2 py-0.5 rounded">1234567</code>. Student should change it after first login.
+            </p>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Email *
-            </label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) =>
-                setFormData({ ...formData, email: e.target.value })
-              }
-              className="input"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Department *
-            </label>
-            <select
-              value={formData.department}
-              onChange={(e) =>
-                setFormData({ ...formData, department: e.target.value })
-              }
-              className="input"
-              required
-            >
-              <option value="">Select Department</option>
-              {DEPARTMENTS.map((dept) => (
-                <option key={dept} value={dept}>
-                  {dept}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Phone
-            </label>
-            <input
-              type="tel"
-              value={formData.phone}
-              onChange={(e) =>
-                setFormData({ ...formData, phone: e.target.value })
-              }
-              className="input"
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-3 pt-2">
             <button
               type="button"
               onClick={() => setShowModal(false)}
@@ -268,5 +301,6 @@ const StudentsPage = () => {
       </Modal>
     </AdminLayout>
   );
-}
-export default StudentsPage
+};
+
+export default StudentsPage;

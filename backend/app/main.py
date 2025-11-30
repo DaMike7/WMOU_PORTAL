@@ -13,6 +13,11 @@ import cloudinary.uploader
 import os
 from enum import Enum
 import uuid
+from dotenv import load_dotenv
+from pydantic import BaseModel, EmailStr, Field
+
+
+load_dotenv()
 
 # ============= CONFIGURATION =============
 app = FastAPI(title="School Portal API")
@@ -29,6 +34,10 @@ app.add_middleware(
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+# Validate before creating client
+if not SUPABASE_URL or not SUPABASE_KEY:
+    raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in environment variables")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # Cloudinary
@@ -41,10 +50,10 @@ cloudinary.config(
 # Security
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = "HS256"
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 security = HTTPBearer()
 
-# ============= ENUMS =============
+# ============= ENUMS ===========
 class UserRole(str, Enum):
     ADMIN = "admin"
     STUDENT = "student"
@@ -83,7 +92,7 @@ class UserCreate(BaseModel):
     department: str
     phone: Optional[str] = None
     role: UserRole = UserRole.STUDENT
-    password: os.getenv("default_password")
+    password: str = "1234567"
 
 class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
@@ -254,16 +263,29 @@ async def create_user(user: UserCreate, admin: dict = Depends(get_admin_user)):
     return {"message": "User created successfully", "user": response.data[0]}
 
 @app.get("/api/admin/users")
-async def get_all_users(admin: dict = Depends(get_admin_user), role: Optional[str] = None):
+async def get_all_users(
+    admin: dict = Depends(get_admin_user), 
+    role: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50
+):
     """Get all users with optional role filter"""
-    query = supabase.table("users").select("*")
+    offset = (page - 1) * limit
+    
+    query = supabase.table("users").select("*", count="exact")
     if role:
         query = query.eq("role", role)
-    response = query.execute()
     
-    # Remove passwords
+    response = query.range(offset, offset + limit - 1).execute()
+    
     users = [{k: v for k, v in user.items() if k != "password"} for user in response.data]
-    return users
+    return {
+        "data": users,
+        "total": response.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (response.count + limit - 1) // limit
+    }
 
 @app.patch("/api/admin/users/{user_id}/status")
 async def update_user_status(user_id: str, status: StudentStatus, admin: dict = Depends(get_admin_user)):
@@ -287,12 +309,15 @@ async def create_course(course: CourseCreate, admin: dict = Depends(get_admin_us
 async def get_courses(
     session: Optional[str] = None,
     semester: Optional[str] = None,
+    page: int = 1,
+    limit: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
     """Get courses filtered by department, session, and semester"""
-    query = supabase.table("courses").select("*")
+    offset = (page - 1) * limit
     
-    # Students only see courses for their department
+    query = supabase.table("courses").select("*", count="exact")
+    
     if current_user["role"] == UserRole.STUDENT:
         query = query.eq("department", current_user["department"])
     
@@ -301,8 +326,14 @@ async def get_courses(
     if semester:
         query = query.eq("semester", semester)
     
-    response = query.execute()
-    return response.data
+    response = query.range(offset, offset + limit - 1).execute()
+    return {
+        "data": response.data,
+        "total": response.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (response.count + limit - 1) // limit
+    }
 
 @app.patch("/api/admin/courses/{course_id}")
 async def update_course(course_id: int, course: CourseUpdate, admin: dict = Depends(get_admin_user)):
@@ -320,14 +351,20 @@ async def delete_course(course_id: int, admin: dict = Depends(get_admin_user)):
 # ============= COURSE REGISTRATION =============
 
 @app.get("/api/student/registered-courses")
-async def get_registered_courses(current_user: dict = Depends(get_current_user)):
+async def get_registered_courses(
+    current_user: dict = Depends(get_current_user),
+    page: int = 1,
+    limit: int = 20
+):
     """Get all courses registered by student with payment status"""
+    offset = (page - 1) * limit
+    
     response = supabase.table("course_registrations")\
-        .select("*, courses(*)")\
+        .select("*, courses(*)", count="exact")\
         .eq("student_id", current_user["id"])\
+        .range(offset, offset + limit - 1)\
         .execute()
     
-    # Get payment status for each course
     registrations = []
     for reg in response.data:
         payment = supabase.table("course_payments")\
@@ -341,7 +378,13 @@ async def get_registered_courses(current_user: dict = Depends(get_current_user))
         reg["payment_status"] = payment.data[0] if payment.data else None
         registrations.append(reg)
     
-    return registrations
+    return {
+        "data": registrations,
+        "total": response.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (response.count + limit - 1) // limit
+    }
 
 @app.get("/api/student/courses-with-payment-status")
 async def get_courses_with_payment_status(
@@ -406,13 +449,27 @@ async def upload_payment_proof(
     }
 
 @app.get("/api/admin/payments")
-async def get_all_payments(admin: dict = Depends(get_admin_user), status: Optional[str] = None):
+async def get_all_payments(
+    admin: dict = Depends(get_admin_user), 
+    status: Optional[str] = None,
+    page: int = 1,
+    limit: int = 30
+):
     """Get all payment records with student and course info"""
-    query = supabase.table("course_payments").select("*, users(full_name, reg_no), courses(course_code, title)")
+    offset = (page - 1) * limit
+    
+    query = supabase.table("course_payments").select("*, users(full_name, reg_no), courses(course_code, title)", count="exact")
     if status:
         query = query.eq("status", status)
-    response = query.order("created_at", desc=True).execute()
-    return response.data
+    
+    response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    return {
+        "data": response.data,
+        "total": response.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (response.count + limit - 1) // limit
+    }
 
 @app.patch("/api/admin/payments/{payment_id}/approve")
 async def approve_payment(
@@ -484,9 +541,13 @@ async def upload_material(
     return {"message": "Material uploaded successfully", "material": response.data[0]}
 
 @app.get("/api/student/materials/{course_id}")
-async def get_course_materials(course_id: int, current_user: dict = Depends(get_current_user)):
+async def get_course_materials(
+    course_id: int, 
+    current_user: dict = Depends(get_current_user),
+    page: int = 1,
+    limit: int = 20
+):
     """Get materials for a registered course"""
-    # Check if student is registered and payment approved
     registration = supabase.table("course_registrations")\
         .select("*")\
         .eq("student_id", current_user["id"])\
@@ -496,21 +557,43 @@ async def get_course_materials(course_id: int, current_user: dict = Depends(get_
     if not registration.data:
         raise HTTPException(status_code=403, detail="You must register and pay for this course")
     
-    # Get materials
+    offset = (page - 1) * limit
+    
     materials = supabase.table("course_materials")\
-        .select("*")\
+        .select("*", count="exact")\
         .eq("course_id", course_id)\
+        .range(offset, offset + limit - 1)\
         .execute()
     
-    return materials.data
+    return {
+        "data": materials.data,
+        "total": materials.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (materials.count + limit - 1) // limit
+    }
 
 @app.get("/api/admin/materials")
-async def get_all_materials(admin: dict = Depends(get_admin_user)):
+async def get_all_materials(
+    admin: dict = Depends(get_admin_user),
+    page: int = 1,
+    limit: int = 20
+):
     """Get all course materials"""
+    offset = (page - 1) * limit
+    
     materials = supabase.table("course_materials")\
-        .select("*, courses(course_code, title)")\
+        .select("*, courses(course_code, title)", count="exact")\
+        .range(offset, offset + limit - 1)\
         .execute()
-    return materials.data
+    
+    return {
+        "data": materials.data,
+        "total": materials.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (materials.count + limit - 1) // limit
+    }
 
 @app.delete("/api/admin/materials/{material_id}")
 async def delete_material(material_id: int, admin: dict = Depends(get_admin_user)):
@@ -545,11 +628,15 @@ async def bulk_upload_results(
 async def get_student_results(
     session: Optional[str] = None,
     semester: Optional[str] = None,
+    page: int = 1,
+    limit: int = 50,
     current_user: dict = Depends(get_current_user)
 ):
     """Get student results with GPA calculation"""
+    offset = (page - 1) * limit
+    
     query = supabase.table("results")\
-        .select("*, courses(course_code, title)")\
+        .select("*, courses(course_code, title)", count="exact")\
         .eq("student_id", current_user["id"])
     
     if session:
@@ -557,7 +644,7 @@ async def get_student_results(
     if semester:
         query = query.eq("semester", semester)
     
-    response = query.execute()
+    response = query.range(offset, offset + limit - 1).execute()
     results = response.data
     
     gpa = calculate_gpa(results)
@@ -565,9 +652,11 @@ async def get_student_results(
     return {
         "results": results,
         "gpa": gpa,
-        "total_courses": len(results)
+        "total_courses": response.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (response.count + limit - 1) // limit
     }
-
 # ============= PROFILE =============
 
 @app.get("/api/profile")
@@ -620,15 +709,27 @@ async def create_announcement(announcement: AnnouncementCreate, admin: dict = De
     return {"message": "Announcement created", "announcement": response.data[0]}
 
 @app.get("/api/announcements")
-async def get_announcements(current_user: dict = Depends(get_current_user)):
+async def get_announcements(
+    current_user: dict = Depends(get_current_user),
+    page: int = 1,
+    limit: int = 10
+):
     """Get announcements for user's department"""
-    query = supabase.table("announcements").select("*, users(full_name)")
+    offset = (page - 1) * limit
+    
+    query = supabase.table("announcements").select("*, users(full_name)", count="exact")
     
     if current_user["role"] == UserRole.STUDENT:
         query = query.or_(f"target_department.eq.{current_user['department']},target_department.is.null")
     
-    response = query.order("created_at", desc=True).execute()
-    return response.data
+    response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    return {
+        "data": response.data,
+        "total": response.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (response.count + limit - 1) // limit
+    }
 
 @app.delete("/api/admin/announcements/{announcement_id}")
 async def delete_announcement(announcement_id: int, admin: dict = Depends(get_admin_user)):
