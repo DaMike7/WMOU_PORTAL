@@ -6,12 +6,13 @@ import Modal from '../../components/common/Modal';
 import { materialService } from '../../services/materialService';
 import { courseService } from '../../services/courseService';
 import { toast } from 'react-hot-toast';
-import { Upload, Trash2, Download, FileText } from 'lucide-react';
+import { Upload, Trash2, Download, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDateTime } from '../../utils/helpers';
 
 const MaterialsPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState({
     course_id: '',
     title: '',
@@ -19,12 +20,12 @@ const MaterialsPage = () => {
 
   const queryClient = useQueryClient();
 
-  const { data: materials, isLoading } = useQuery({
-    queryKey: ['adminMaterials'],
-    queryFn: materialService.getAllMaterials,
+  const { data: materialsData, isLoading } = useQuery({
+    queryKey: ['adminMaterials', currentPage],
+    queryFn: () => materialService.getAllMaterials(currentPage, 20),
   });
 
-  const { data: courses } = useQuery({
+  const { data: coursesData } = useQuery({
     queryKey: ['adminCourses'],
     queryFn: () => courseService.getCourses(),
   });
@@ -83,7 +84,12 @@ const MaterialsPage = () => {
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Course Materials</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Course Materials</h1>
+          <p className="text-gray-500 mt-1">
+            Total: {materialsData?.total || 0} materials
+          </p>
+        </div>
         <button onClick={() => setShowModal(true)} className="btn-primary">
           <Upload className="h-4 w-4 mr-2" />
           Upload Material
@@ -113,20 +119,20 @@ const MaterialsPage = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {materials?.map((material) => (
+              {materialsData?.data?.map((material) => (
                 <tr key={material.id} className="table-row">
                   <td className="px-6 py-4">
                     <div className="flex items-center">
                       <FileText className="h-5 w-5 text-gray-400 mr-2" />
-                      {material.title}
+                      <span className="font-medium">{material.title}</span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div>
-                      <p className="font-semibold">
+                      <p className="font-semibold text-sm">
                         {material.courses?.course_code}
                       </p>
-                      <p className="text-sm text-gray-500">
+                      <p className="text-xs text-gray-500">
                         {material.courses?.title}
                       </p>
                     </div>
@@ -134,7 +140,7 @@ const MaterialsPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {material.file_type}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
                     {formatDateTime(material.uploaded_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -143,14 +149,14 @@ const MaterialsPage = () => {
                         href={material.file_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
                         title="Download"
                       >
                         <Download className="h-4 w-4" />
                       </a>
                       <button
                         onClick={() => handleDelete(material.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded"
                         title="Delete"
                       >
                         <Trash2 className="h-4 w-4" />
@@ -162,6 +168,31 @@ const MaterialsPage = () => {
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {materialsData?.total_pages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {materialsData.total_pages}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(materialsData.total_pages, p + 1))}
+                disabled={currentPage === materialsData.total_pages}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Upload Material Modal */}
@@ -174,21 +205,19 @@ const MaterialsPage = () => {
         }}
         title="Upload Course Material"
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Course *
             </label>
             <select
               value={formData.course_id}
-              onChange={(e) =>
-                setFormData({ ...formData, course_id: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, course_id: e.target.value })}
               className="input"
               required
             >
               <option value="">Select Course</option>
-              {courses?.map((course) => (
+              {coursesData?.data?.map((course) => (
                 <option key={course.id} value={course.id}>
                   {course.course_code} - {course.title}
                 </option>
@@ -197,15 +226,13 @@ const MaterialsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title *
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Material Title *
             </label>
             <input
               type="text"
               value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="input"
               placeholder="e.g., Lecture Notes Week 1"
               required
@@ -213,7 +240,7 @@ const MaterialsPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               File *
             </label>
             <input
@@ -223,12 +250,12 @@ const MaterialsPage = () => {
               accept=".pdf,.doc,.docx,.ppt,.pptx,.zip"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">
-              Supported: PDF, DOC, DOCX, PPT, PPTX, ZIP
+            <p className="text-xs text-gray-500 mt-2">
+              Supported formats: PDF, DOC, DOCX, PPT, PPTX, ZIP (Max 10MB)
             </p>
           </div>
 
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-3 pt-2">
             <button
               type="button"
               onClick={() => {
@@ -245,12 +272,13 @@ const MaterialsPage = () => {
               disabled={uploadMutation.isLoading}
               className="btn-primary"
             >
-              {uploadMutation.isLoading ? 'Uploading...' : 'Upload'}
+              {uploadMutation.isLoading ? 'Uploading...' : 'Upload Material'}
             </button>
           </div>
         </form>
       </Modal>
     </AdminLayout>
   );
-}
-export default MaterialsPage
+};
+
+export default MaterialsPage;

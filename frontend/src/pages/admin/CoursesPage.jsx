@@ -5,13 +5,14 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import { courseService } from '../../services/courseService';
 import { toast } from 'react-hot-toast';
-import { BookOpen, Plus, Pencil, Trash2 } from 'lucide-react';
+import { BookOpen, Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { DEPARTMENTS, SESSIONS, SEMESTERS } from '../../utils/constants';
 import { formatCurrency } from '../../utils/helpers';
 
-const CoursesPage = () =>{
+const CoursesPage = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [formData, setFormData] = useState({
     course_code: '',
     title: '',
@@ -23,9 +24,9 @@ const CoursesPage = () =>{
 
   const queryClient = useQueryClient();
 
-  const { data: courses, isLoading } = useQuery({
-    queryKey: ['adminCourses'],
-    queryFn: () => courseService.getCourses(),
+  const { data: coursesData, isLoading } = useQuery({
+    queryKey: ['adminCourses', currentPage],
+    queryFn: () => courseService.getCourses(null, null, currentPage, 20),
   });
 
   const createMutation = useMutation({
@@ -118,7 +119,12 @@ const CoursesPage = () =>{
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Courses</h1>
+          <p className="text-gray-500 mt-1">
+            Total: {coursesData?.total || 0} courses
+          </p>
+        </div>
         <button
           onClick={() => {
             resetForm();
@@ -161,31 +167,31 @@ const CoursesPage = () =>{
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {courses?.map((course) => (
+              {coursesData?.data?.map((course) => (
                 <tr key={course.id} className="table-row">
                   <td className="px-6 py-4 whitespace-nowrap font-mono font-semibold">
                     {course.course_code}
                   </td>
                   <td className="px-6 py-4">{course.title}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
                     {course.department}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">{course.session}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">{course.semester}</td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{course.session}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">{course.semester}</td>
+                  <td className="px-6 py-4 whitespace-nowrap font-semibold">
                     {formatCurrency(course.fee)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex space-x-2">
                       <button
                         onClick={() => handleEdit(course)}
-                        className="text-blue-600 hover:text-blue-800"
+                        className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDelete(course.id)}
-                        className="text-red-600 hover:text-red-800"
+                        className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="h-4 w-4" />
                       </button>
@@ -196,6 +202,31 @@ const CoursesPage = () =>{
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {coursesData?.total_pages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {coursesData.total_pages}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(coursesData.total_pages, p + 1))}
+                disabled={currentPage === coursesData.total_pages}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add/Edit Course Modal */}
@@ -209,46 +240,59 @@ const CoursesPage = () =>{
         title={editingCourse ? 'Edit Course' : 'Add New Course'}
       >
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Course Code *
-            </label>
-            <input
-              type="text"
-              value={formData.course_code}
-              onChange={(e) =>
-                setFormData({ ...formData, course_code: e.target.value })
-              }
-              className="input"
-              disabled={!!editingCourse}
-              required
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Course Code *
+              </label>
+              <input
+                type="text"
+                value={formData.course_code}
+                onChange={(e) => setFormData({ ...formData, course_code: e.target.value })}
+                className="input"
+                placeholder="e.g., CSC101"
+                disabled={!!editingCourse}
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Fee (₦) *
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                value={formData.fee}
+                onChange={(e) => setFormData({ ...formData, fee: e.target.value })}
+                className="input"
+                placeholder="10000"
+                required
+              />
+            </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title *
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
+              Course Title *
             </label>
             <input
               type="text"
               value={formData.title}
-              onChange={(e) =>
-                setFormData({ ...formData, title: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
               className="input"
+              placeholder="e.g., Introduction to Computer Science"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-semibold text-gray-700 mb-2">
               Department *
             </label>
             <select
               value={formData.department}
-              onChange={(e) =>
-                setFormData({ ...formData, department: e.target.value })
-              }
+              onChange={(e) => setFormData({ ...formData, department: e.target.value })}
               className="input"
               required
             >
@@ -261,65 +305,47 @@ const CoursesPage = () =>{
             </select>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Session *
-            </label>
-            <select
-              value={formData.session}
-              onChange={(e) =>
-                setFormData({ ...formData, session: e.target.value })
-              }
-              className="input"
-              required
-            >
-              <option value="">Select Session</option>
-              {SESSIONS.map((session) => (
-                <option key={session} value={session}>
-                  {session}
-                </option>
-              ))}
-            </select>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Session *
+              </label>
+              <select
+                value={formData.session}
+                onChange={(e) => setFormData({ ...formData, session: e.target.value })}
+                className="input"
+                required
+              >
+                <option value="">Select Session</option>
+                {SESSIONS.map((session) => (
+                  <option key={session} value={session}>
+                    {session}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Semester *
+              </label>
+              <select
+                value={formData.semester}
+                onChange={(e) => setFormData({ ...formData, semester: e.target.value })}
+                className="input"
+                required
+              >
+                <option value="">Select Semester</option>
+                {SEMESTERS.map((sem) => (
+                  <option key={sem.value} value={sem.value}>
+                    {sem.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Semester *
-            </label>
-            <select
-              value={formData.semester}
-              onChange={(e) =>
-                setFormData({ ...formData, semester: e.target.value })
-              }
-              className="input"
-              required
-            >
-              <option value="">Select Semester</option>
-              {SEMESTERS.map((sem) => (
-                <option key={sem.value} value={sem.value}>
-                  {sem.label}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Fee *
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              value={formData.fee}
-              onChange={(e) =>
-                setFormData({ ...formData, fee: e.target.value })
-              }
-              className="input"
-              required
-            />
-          </div>
-
-          <div className="flex justify-end space-x-3">
+          <div className="flex justify-end space-x-3 pt-2">
             <button
               type="button"
               onClick={() => {
@@ -343,6 +369,6 @@ const CoursesPage = () =>{
       </Modal>
     </AdminLayout>
   );
-}
+};
 
-export default CoursesPage
+export default CoursesPage;

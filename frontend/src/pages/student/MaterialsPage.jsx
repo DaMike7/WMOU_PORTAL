@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import StudentLayout from './StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import { courseService } from '../../services/courseService.js';
 import { materialService } from '../../services/materialService.js';
-import { Download, FileText, Folder } from 'lucide-react';
+import { Download, FileText, Folder, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatDateTime } from '../../utils/helpers';
 
 const MaterialsPage = () => {
-  const { data: registrations, isLoading } = useQuery({
-    queryKey: ['registeredCourses'],
-    queryFn: courseService.getRegisteredCourses,
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data: registrationsData, isLoading } = useQuery({
+    queryKey: ['registeredCourses', currentPage],
+    queryFn: () => courseService.getRegisteredCourses(currentPage, 20),
   });
 
   if (isLoading) {
@@ -22,13 +24,18 @@ const MaterialsPage = () => {
     );
   }
 
-  const approvedCourses = registrations?.filter(
+  const approvedCourses = registrationsData?.data?.filter(
     (reg) => reg.payment_status?.status === 'approved'
   );
 
   return (
     <StudentLayout>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Course Materials</h1>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Course Materials</h1>
+        <p className="text-gray-500 mt-1">
+          Access study materials for your registered courses
+        </p>
+      </div>
 
       {approvedCourses?.length === 0 ? (
         <div className="card">
@@ -38,26 +45,55 @@ const MaterialsPage = () => {
           />
         </div>
       ) : (
-        <div className="space-y-6">
-          {approvedCourses?.map((reg) => (
-            <CourseMaterialsCard key={reg.id} registration={reg} />
-          ))}
-        </div>
+        <>
+          <div className="space-y-6">
+            {approvedCourses?.map((reg) => (
+              <CourseMaterialsCard key={reg.id} registration={reg} />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          {registrationsData?.total_pages > 1 && (
+            <div className="flex items-center justify-between mt-6 card">
+              <div className="text-sm text-gray-500">
+                Page {currentPage} of {registrationsData.total_pages}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(registrationsData.total_pages, p + 1))}
+                  disabled={currentPage === registrationsData.total_pages}
+                  className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </StudentLayout>
   );
-}
+};
 
 function CourseMaterialsCard({ registration }) {
-  const { data: materials, isLoading } = useQuery({
-    queryKey: ['materials', registration.course_id],
-    queryFn: () => materialService.getCourseMaterials(registration.course_id),
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const { data: materialsData, isLoading } = useQuery({
+    queryKey: ['materials', registration.course_id, currentPage],
+    queryFn: () => materialService.getCourseMaterials(registration.course_id, currentPage, 20),
   });
 
   return (
     <div className="card">
       <div className="flex items-center space-x-3 mb-4">
-        <Folder className="h-6 w-6 text-primary-600" />
+        <Folder className="h-6 w-6 text-[#1e3a5f]" />
         <div>
           <h2 className="text-xl font-bold text-gray-900">
             {registration.courses?.course_code}
@@ -68,38 +104,66 @@ function CourseMaterialsCard({ registration }) {
 
       {isLoading ? (
         <LoadingSpinner size="sm" />
-      ) : materials?.length === 0 ? (
-        <p className="text-gray-500 text-sm">No materials uploaded yet</p>
+      ) : materialsData?.data?.length === 0 ? (
+        <p className="text-gray-500 text-sm py-4">No materials uploaded yet</p>
       ) : (
-        <div className="space-y-2">
-          {materials?.map((material) => (
-            <div
-              key={material.id}
-              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-            >
-              <div className="flex items-center space-x-3">
-                <FileText className="h-5 w-5 text-gray-400" />
-                <div>
-                  <p className="font-medium text-gray-900">{material.title}</p>
-                  <p className="text-xs text-gray-500">
-                    {formatDateTime(material.uploaded_at)}
-                  </p>
-                </div>
-              </div>
-              <a
-                href={material.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary-600 hover:text-primary-700"
-                download
+        <>
+          <div className="space-y-2">
+            {materialsData?.data?.map((material) => (
+              <div
+                key={material.id}
+                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
               >
-                <Download className="h-5 w-5" />
-              </a>
+                <div className="flex items-center space-x-3">
+                  <FileText className="h-5 w-5 text-gray-400" />
+                  <div>
+                    <p className="font-medium text-gray-900">{material.title}</p>
+                    <p className="text-xs text-gray-500">
+                      {formatDateTime(material.uploaded_at)}
+                    </p>
+                  </div>
+                </div>
+                <a
+                  href={material.file_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[#1e3a5f] hover:text-[#2d5a8f] p-2 hover:bg-blue-50 rounded"
+                  download
+                >
+                  <Download className="h-5 w-5" />
+                </a>
+              </div>
+            ))}
+          </div>
+
+          {/* Pagination for materials */}
+          {materialsData?.total_pages > 1 && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="text-xs text-gray-500">
+                Page {currentPage} of {materialsData.total_pages}
+              </div>
+              <div className="flex space-x-2">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="px-2 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(materialsData.total_pages, p + 1))}
+                  disabled={currentPage === materialsData.total_pages}
+                  className="px-2 py-1 border rounded disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                >
+                  <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
             </div>
-          ))}
-        </div>
+          )}
+        </>
       )}
     </div>
   );
 }
-export default MaterialsPage
+
+export default MaterialsPage;

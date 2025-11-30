@@ -4,20 +4,33 @@ import StudentLayout from './StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import EmptyState from '../../components/common/EmptyState';
 import { resultService } from '../../services/resultService';
-import { Award, TrendingUp } from 'lucide-react';
+import { Award, TrendingUp, ChevronLeft, ChevronRight } from 'lucide-react';
 import { getGradeColor } from '../../utils/helpers';
 import { SESSIONS, SEMESTERS } from '../../utils/constants';
 
 const ResultsPage = () => {
   const [session, setSession] = useState('2025/2026');
   const [semester, setSemester] = useState('First Semester');
+  const [page, setPage] = useState(1);
+  const limit = 50;
 
   const { data, isLoading } = useQuery({
-    queryKey: ['results', session, semester],
-    queryFn: () => resultService.getStudentResults(session, semester),
+    queryKey: ['results', session, semester, page],
+    queryFn: () => resultService.getStudentResults(session, semester, page, limit),
+    keepPreviousData: true,
   });
 
-  if (isLoading) {
+  const totalPages = data ? Math.ceil(data.total_courses / limit) : 0;
+
+  const handlePrevPage = () => {
+    setPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const handleNextPage = () => {
+    setPage((prev) => Math.min(prev + 1, totalPages));
+  };
+
+  if (isLoading && !data) {
     return (
       <StudentLayout>
         <LoadingSpinner />
@@ -38,7 +51,10 @@ const ResultsPage = () => {
             </label>
             <select
               value={session}
-              onChange={(e) => setSession(e.target.value)}
+              onChange={(e) => {
+                setSession(e.target.value);
+                setPage(1);
+              }}
               className="input"
             >
               {SESSIONS.map((s) => (
@@ -54,7 +70,10 @@ const ResultsPage = () => {
             </label>
             <select
               value={semester}
-              onChange={(e) => setSemester(e.target.value)}
+              onChange={(e) => {
+                setSemester(e.target.value);
+                setPage(1);
+              }}
               className="input"
             >
               {SEMESTERS.map((sem) => (
@@ -92,52 +111,87 @@ const ResultsPage = () => {
           />
         </div>
       ) : (
-        <div className="card">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Course Code
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Course Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Score
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                    Grade
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {data?.results?.map((result) => (
-                  <tr key={result.id} className="table-row">
-                    <td className="px-6 py-4 whitespace-nowrap font-mono font-semibold">
-                      {result.courses?.course_code}
-                    </td>
-                    <td className="px-6 py-4">{result.courses?.title}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-lg font-semibold">
-                      {result.score}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`text-3xl font-bold ${getGradeColor(
-                          result.grade
-                        )}`}
-                      >
-                        {result.grade}
-                      </span>
-                    </td>
+        <>
+          <div className="card">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Course Code
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Course Title
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Score
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                      Grade
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {data?.results?.map((result) => (
+                    <tr key={result.id} className="table-row">
+                      <td className="px-6 py-4 whitespace-nowrap font-mono font-semibold">
+                        {result.courses?.course_code}
+                      </td>
+                      <td className="px-6 py-4">{result.courses?.title}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-lg font-semibold">
+                        {result.score}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span
+                          className={`text-3xl font-bold ${getGradeColor(
+                            result.grade
+                          )}`}
+                        >
+                          {result.grade}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="card mt-6">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-700">
+                  Showing page <span className="font-semibold">{page}</span> of{' '}
+                  <span className="font-semibold">{totalPages}</span>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={page === 1 || isLoading}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Previous
+                  </button>
+
+                  <button
+                    onClick={handleNextPage}
+                    disabled={page === totalPages || isLoading}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </StudentLayout>
   );
-}
+};
+
 export default ResultsPage;

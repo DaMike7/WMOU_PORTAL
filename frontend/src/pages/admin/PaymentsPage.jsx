@@ -6,29 +6,28 @@ import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import { paymentService } from '../../services/paymentService';
 import { toast } from 'react-hot-toast';
-import { CheckCircle, XCircle, Eye } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 
-const PaymentsPage = () =>{
+const PaymentsPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
 
   const queryClient = useQueryClient();
 
-  const { data: payments, isLoading } = useQuery({
-    queryKey: ['adminPayments', statusFilter],
-    queryFn: () => paymentService.getAllPayments(statusFilter || null),
+  const { data: paymentsData, isLoading } = useQuery({
+    queryKey: ['adminPayments', statusFilter, currentPage],
+    queryFn: () => paymentService.getAllPayments(statusFilter || null, currentPage, 30),
   });
 
   const approveMutation = useMutation({
     mutationFn: ({ paymentId, approved, rejectionReason }) =>
       paymentService.approvePayment(paymentId, approved, rejectionReason),
     onSuccess: (data, variables) => {
-      toast.success(
-        variables.approved ? 'Payment approved' : 'Payment rejected'
-      );
+      toast.success(variables.approved ? 'Payment approved' : 'Payment rejected');
       queryClient.invalidateQueries(['adminPayments']);
       setSelectedPayment(null);
       setRejectionReason('');
@@ -74,7 +73,12 @@ const PaymentsPage = () =>{
 
   return (
     <AdminLayout>
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Payment Approvals</h1>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">Payment Approvals</h1>
+        <p className="text-gray-500 mt-1">
+          Total: {paymentsData?.total || 0} payments
+        </p>
+      </div>
 
       {/* Filter */}
       <div className="card mb-6">
@@ -84,8 +88,11 @@ const PaymentsPage = () =>{
           </label>
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="border border-gray-300 rounded-lg px-4 py-2"
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
           >
             <option value="">All</option>
             <option value="pending">Pending</option>
@@ -128,27 +135,27 @@ const PaymentsPage = () =>{
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {payments?.map((payment) => (
+              {paymentsData?.data?.map((payment) => (
                 <tr key={payment.id} className="table-row">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 whitespace-nowrap font-medium">
                     {payment.users?.full_name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-mono">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm">
                     {payment.users?.reg_no}
                   </td>
                   <td className="px-6 py-4">
                     <div>
-                      <p className="font-semibold">{payment.courses?.course_code}</p>
-                      <p className="text-sm text-gray-500">{payment.courses?.title}</p>
+                      <p className="font-semibold text-sm">{payment.courses?.course_code}</p>
+                      <p className="text-xs text-gray-500">{payment.courses?.title}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-semibold">
+                  <td className="px-6 py-4 whitespace-nowrap font-semibold text-green-600">
                     {formatCurrency(payment.amount_paid)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Badge status={payment.status} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-xs">
                     {formatDateTime(payment.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -157,7 +164,7 @@ const PaymentsPage = () =>{
                         setSelectedPayment(payment);
                         setShowReceiptModal(true);
                       }}
-                      className="text-blue-600 hover:text-blue-800"
+                      className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
                     >
                       <Eye className="h-4 w-4" />
                     </button>
@@ -167,14 +174,14 @@ const PaymentsPage = () =>{
                       <div className="flex space-x-2">
                         <button
                           onClick={() => handleApprove(payment)}
-                          className="text-green-600 hover:text-green-800"
+                          className="text-green-600 hover:text-green-800 p-1 hover:bg-green-50 rounded"
                           title="Approve"
                         >
                           <CheckCircle className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleReject(payment)}
-                          className="text-red-600 hover:text-red-800"
+                          className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded"
                           title="Reject"
                         >
                           <XCircle className="h-5 w-5" />
@@ -182,10 +189,10 @@ const PaymentsPage = () =>{
                       </div>
                     )}
                     {payment.status === 'approved' && (
-                      <span className="text-green-600 text-sm">Approved</span>
+                      <span className="text-green-600 text-sm font-medium">Approved</span>
                     )}
                     {payment.status === 'rejected' && (
-                      <span className="text-red-600 text-sm">Rejected</span>
+                      <span className="text-red-600 text-sm font-medium">Rejected</span>
                     )}
                   </td>
                 </tr>
@@ -193,9 +200,34 @@ const PaymentsPage = () =>{
             </tbody>
           </table>
         </div>
+
+        {/* Pagination */}
+        {paymentsData?.total_pages > 1 && (
+          <div className="flex items-center justify-between px-6 py-4 border-t">
+            <div className="text-sm text-gray-500">
+              Page {currentPage} of {paymentsData.total_pages}
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => setCurrentPage((p) => Math.min(paymentsData.total_pages, p + 1))}
+                disabled={currentPage === paymentsData.total_pages}
+                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Receipt Modal */}
+{/* Receipt Modal */}
       <Modal
         isOpen={showReceiptModal}
         onClose={() => {
@@ -257,14 +289,15 @@ const PaymentsPage = () =>{
             <button
               onClick={submitRejection}
               disabled={approveMutation.isLoading}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700"
+              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
             >
-              Reject Payment
+              {approveMutation.isLoading ? 'Rejecting...' : 'Reject Payment'}
             </button>
           </div>
         </div>
       </Modal>
     </AdminLayout>
   );
-}
-export default PaymentsPage
+};
+
+export default PaymentsPage;
