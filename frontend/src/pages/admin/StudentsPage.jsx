@@ -6,8 +6,11 @@ import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
-import { UserPlus, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { UserPlus, Search, ChevronLeft, ChevronRight, UserCheck, UserX } from 'lucide-react';
 import { DEPARTMENTS } from '../../utils/constants';
+
+const WMOuBlue = '#1e3a5f';
+const WMOuBlueText = 'text-[#1e3a5f]';
 
 const StudentsPage = () => {
   const [showModal, setShowModal] = useState(false);
@@ -26,6 +29,7 @@ const StudentsPage = () => {
   const { data: studentsData, isLoading } = useQuery({
     queryKey: ['students', currentPage],
     queryFn: () => userService.getAllUsers('student', currentPage, 50),
+    keepPreviousData: true,
   });
 
   const createMutation = useMutation({
@@ -53,6 +57,9 @@ const StudentsPage = () => {
       toast.success('Status updated successfully');
       queryClient.invalidateQueries(['students']);
     },
+    onError: (error) => {
+        toast.error(error.response?.data?.detail || 'Failed to update status');
+    },
   });
 
   const handleSubmit = (e) => {
@@ -67,6 +74,15 @@ const StudentsPage = () => {
       student.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleStatusChange = (studentId, newStatus) => {
+    updateStatusMutation.mutate({ userId: studentId, status: newStatus });
+  };
+  
+  const inputStyle = "w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-opacity-50 focus:ring-[#1e3a5f]/50 focus:border-[#1e3a5f] transition duration-150 ease-in-out shadow-sm";
+  const primaryBtnStyle = `px-4 py-2 text-white rounded-xl font-semibold transition-colors disabled:opacity-50`;
+  const secondaryBtnStyle = `px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors`;
+
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -77,72 +93,83 @@ const StudentsPage = () => {
 
   return (
     <AdminLayout>
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Students</h1>
-          <p className="text-gray-500 mt-1">
-            Total: {studentsData?.total || 0} students
-          </p>
-        </div>
-        <button onClick={() => setShowModal(true)} className="btn-primary">
+      <div className="flex justify-between items-center mb-6 relative">
+        <h1 className="text-3xl font-extrabold text-gray-900 ml-10 lg:ml-0">Student Records</h1>
+        <button 
+          onClick={() => {
+            setFormData({reg_no: '',email: '',full_name: '',department: '',phone: '',});
+            setShowModal(true);
+          }} 
+          className={`flex items-center px-4 py-2 text-white rounded-xl font-semibold transition-colors shadow-md hover:shadow-lg`}
+          style={{ backgroundColor: WMOuBlue }}
+        >
           <UserPlus className="h-4 w-4 mr-2" />
           Add Student
         </button>
       </div>
+      
+      <p className="text-gray-500 mb-6 -mt-4 ml-10 lg:ml-0 hidden lg:block">
+        Manage all student accounts and update their status. Total: {studentsData?.total || 0} records
+      </p>
 
-      {/* Search */}
-      <div className="card mb-6">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by name, reg no, or email..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="input pl-10"
-          />
+      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+
+        <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+            <div className="flex space-x-4 border-b border-gray-100 pb-2 w-full sm:w-auto">
+                <span className={`py-2 px-4 font-semibold ${WMOuBlueText} border-b-2 border-[#1e3a5f]`}>
+                    All ({studentsData?.total || 0})
+                </span>
+            </div>
+            
+            <div className="relative w-full sm:w-1/3">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                    type="text"
+                    placeholder="Search students..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className={`pl-10 ${inputStyle}`}
+                />
+            </div>
         </div>
-      </div>
 
-      {/* Students Table */}
-      <div className="card">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-white">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Reg No
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                  Reg No
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
                   Email
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Department
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-100">
               {filteredStudents?.map((student) => (
-                <tr key={student.id} className="table-row">
-                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm">
-                    {student.reg_no}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">
+                <tr key={student.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
                     {student.full_name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm hidden sm:table-cell">
+                    {student.reg_no}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
                     {student.email}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {student.department}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -151,13 +178,9 @@ const StudentsPage = () => {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <select
                       value={student.status}
-                      onChange={(e) =>
-                        updateStatusMutation.mutate({
-                          userId: student.id,
-                          status: e.target.value,
-                        })
-                      }
-                      className="text-sm border border-gray-300 rounded-lg px-3 py-1.5 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
+                      onChange={(e) => handleStatusChange(student.id, e.target.value)}
+                      className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent bg-white shadow-sm hover:border-gray-300 transition"
+                      disabled={updateStatusMutation.isLoading}
                     >
                       <option value="active">Active</option>
                       <option value="suspended">Suspended</option>
@@ -168,39 +191,39 @@ const StudentsPage = () => {
               ))}
             </tbody>
           </table>
+          
+          {filteredStudents?.length === 0 && (
+            <div className="text-center py-8 text-gray-500">No students found matching your search.</div>
+          )}
         </div>
 
-        {/* Pagination */}
-        {studentsData?.total_pages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t">
-            <div className="text-sm text-gray-500">
-              Page {currentPage} of {studentsData.total_pages}
-            </div>
-            <div className="flex space-x-2">
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => setCurrentPage((p) => Math.min(studentsData.total_pages, p + 1))}
-                disabled={currentPage === studentsData.total_pages}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+        <div className="flex items-center justify-between px-2 sm:px-6 py-4 border-t border-gray-100 mt-4">
+          <div className="text-sm text-gray-600">
+            Page {currentPage} of {studentsData?.total_pages || 1}
           </div>
-        )}
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 border border-gray-200 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(studentsData?.total_pages, p + 1))}
+              disabled={currentPage === studentsData?.total_pages || studentsData?.total_pages === 0}
+              className="px-3 py-1.5 border border-gray-200 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Add Student Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New Student">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 gap-4">
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Registration Number *
               </label>
@@ -208,13 +231,13 @@ const StudentsPage = () => {
                 type="text"
                 value={formData.reg_no}
                 onChange={(e) => setFormData({ ...formData, reg_no: e.target.value })}
-                className="input"
+                className={inputStyle}
                 placeholder="e.g., STU/2024/001"
                 required
               />
             </div>
 
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Full Name *
               </label>
@@ -222,13 +245,13 @@ const StudentsPage = () => {
                 type="text"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
-                className="input"
+                className={inputStyle}
                 placeholder="Enter student's full name"
                 required
               />
             </div>
 
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Email Address *
               </label>
@@ -236,20 +259,20 @@ const StudentsPage = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="input"
+                className={inputStyle}
                 placeholder="student@example.com"
                 required
               />
             </div>
 
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Department *
               </label>
               <select
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="input"
+                className={inputStyle}
                 required
               >
                 <option value="">Select Department</option>
@@ -261,7 +284,7 @@ const StudentsPage = () => {
               </select>
             </div>
 
-            <div className="col-span-2">
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 Phone Number
               </label>
@@ -269,13 +292,13 @@ const StudentsPage = () => {
                 type="tel"
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                className="input"
+                className={inputStyle}
                 placeholder="+234 XXX XXX XXXX"
               />
             </div>
           </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <p className="text-sm text-blue-800">
               <strong>Note:</strong> Default password will be set to <code className="bg-blue-100 px-2 py-0.5 rounded">1234567</code>. Student should change it after first login.
             </p>
@@ -285,14 +308,15 @@ const StudentsPage = () => {
             <button
               type="button"
               onClick={() => setShowModal(false)}
-              className="btn-secondary"
+              className={secondaryBtnStyle}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createMutation.isLoading}
-              className="btn-primary"
+              className={primaryBtnStyle}
+              style={{ backgroundColor: WMOuBlue }}
             >
               {createMutation.isLoading ? 'Creating...' : 'Create Student'}
             </button>

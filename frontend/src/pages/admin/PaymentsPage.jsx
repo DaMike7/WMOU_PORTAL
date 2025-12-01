@@ -6,8 +6,14 @@ import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import { paymentService } from '../../services/paymentService';
 import { toast } from 'react-hot-toast';
-import { CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
+
+const WMOuBlue = '#1e3a5f';
+const WMOuBlueText = 'text-[#1e3a5f]';
+const primaryBtnStyle = `px-4 py-2 text-white rounded-xl font-semibold transition-colors disabled:opacity-50`;
+const secondaryBtnStyle = `px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors`;
+const inputStyle = "w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-opacity-50 focus:ring-[#1e3a5f]/50 focus:border-[#1e3a5f] transition duration-150 ease-in-out shadow-sm";
 
 const PaymentsPage = () => {
   const [statusFilter, setStatusFilter] = useState('');
@@ -21,6 +27,7 @@ const PaymentsPage = () => {
   const { data: paymentsData, isLoading } = useQuery({
     queryKey: ['adminPayments', statusFilter, currentPage],
     queryFn: () => paymentService.getAllPayments(statusFilter || null, currentPage, 30),
+    keepPreviousData: true,
   });
 
   const approveMutation = useMutation({
@@ -63,6 +70,11 @@ const PaymentsPage = () => {
     });
   };
 
+  const handleCloseRejectionModal = () => {
+    setSelectedPayment(null);
+    setRejectionReason('');
+  };
+
   if (isLoading) {
     return (
       <AdminLayout>
@@ -73,152 +85,153 @@ const PaymentsPage = () => {
 
   return (
     <AdminLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Payment Approvals</h1>
-        <p className="text-gray-500 mt-1">
-          Total: {paymentsData?.total || 0} payments
-        </p>
+      <div className="flex justify-between items-center mb-6 relative">
+        <h1 className="text-3xl font-extrabold text-gray-900 ml-10 lg:ml-0">Payment Approvals</h1>
       </div>
+      
+      <p className="text-gray-500 mb-6 -mt-4 ml-10 lg:ml-0 hidden lg:block">
+        Review and approve student payment receipts. Total: {paymentsData?.total || 0} payments
+      </p>
 
-      {/* Filter */}
-      <div className="card mb-6">
-        <div className="flex items-center space-x-4">
-          <label className="text-sm font-medium text-gray-700">
-            Filter by Status:
-          </label>
-          <select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent"
-          >
-            <option value="">All</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
+      <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
+
+        <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+            <div className="flex space-x-4 border-b border-gray-100 pb-2 w-full sm:w-auto">
+                <span className={`py-2 px-4 font-semibold ${WMOuBlueText} border-b-2 border-[#1e3a5f]`}>
+                    All ({paymentsData?.total || 0})
+                </span>
+            </div>
+            
+            <div className="flex items-center space-x-2 w-full sm:w-auto">
+              <Filter className="h-5 w-5 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(e) => {
+                  setStatusFilter(e.target.value);
+                  setCurrentPage(1);
+                }}
+                className={`border border-gray-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent transition text-sm shadow-sm`}
+              >
+                <option value="">All Statuses</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+              </select>
+            </div>
         </div>
-      </div>
 
-      {/* Payments Table */}
-      <div className="card">
         <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-gray-100">
+            <thead className="bg-white">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Student
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Student/Reg No
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Reg No
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
                   Course
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
                   Date
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Receipt
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-white divide-y divide-gray-100">
               {paymentsData?.data?.map((payment) => (
-                <tr key={payment.id} className="table-row">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium">
-                    {payment.users?.full_name}
+                <tr key={payment.id} className="hover:bg-gray-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <p className="font-medium text-gray-900">{payment.users?.full_name}</p>
+                    <p className="font-mono text-xs text-gray-500">{payment.users?.reg_no}</p>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm">
-                    {payment.users?.reg_no}
+                  <td className="px-6 py-4 hidden sm:table-cell">
+                    <p className="font-semibold text-sm">{payment.courses?.course_code}</p>
+                    <p className="text-xs text-gray-500">{payment.courses?.title}</p>
                   </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <p className="font-semibold text-sm">{payment.courses?.course_code}</p>
-                      <p className="text-xs text-gray-500">{payment.courses?.title}</p>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-semibold text-green-600">
+                  <td className="px-6 py-4 whitespace-nowrap font-bold text-green-600">
                     {formatCurrency(payment.amount_paid)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-xs hidden md:table-cell">
+                    {formatDateTime(payment.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Badge status={payment.status} />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-xs">
-                    {formatDateTime(payment.created_at)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 text-center whitespace-nowrap">
                     <button
                       onClick={() => {
                         setSelectedPayment(payment);
                         setShowReceiptModal(true);
                       }}
-                      className="text-blue-600 hover:text-blue-800 p-1 hover:bg-blue-50 rounded"
+                      className="text-gray-500 hover:text-[#1e3a5f] p-2 rounded-lg hover:bg-gray-100 transition"
+                      title="View Receipt"
                     >
                       <Eye className="h-4 w-4" />
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {payment.status === 'pending' && (
-                      <div className="flex space-x-2">
+                  <td className="px-6 py-4 text-center whitespace-nowrap">
+                    {payment.status === 'pending' ? (
+                      <div className="flex space-x-2 justify-center">
                         <button
                           onClick={() => handleApprove(payment)}
-                          className="text-green-600 hover:text-green-800 p-1 hover:bg-green-50 rounded"
+                          className="text-green-600 hover:text-green-800 p-2 rounded-lg hover:bg-green-50 transition"
                           title="Approve"
+                          disabled={approveMutation.isLoading}
                         >
                           <CheckCircle className="h-5 w-5" />
                         </button>
                         <button
                           onClick={() => handleReject(payment)}
-                          className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded"
+                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 transition"
                           title="Reject"
+                          disabled={approveMutation.isLoading}
                         >
                           <XCircle className="h-5 w-5" />
                         </button>
                       </div>
-                    )}
-                    {payment.status === 'approved' && (
-                      <span className="text-green-600 text-sm font-medium">Approved</span>
-                    )}
-                    {payment.status === 'rejected' && (
-                      <span className="text-red-600 text-sm font-medium">Rejected</span>
+                    ) : (
+                      <span className={`text-sm font-medium ${payment.status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
+                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
+                      </span>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+          
+          {paymentsData?.data?.length === 0 && (
+            <div className="text-center py-8 text-gray-500">No payments found.</div>
+          )}
         </div>
 
-        {/* Pagination */}
         {paymentsData?.total_pages > 1 && (
-          <div className="flex items-center justify-between px-6 py-4 border-t">
-            <div className="text-sm text-gray-500">
+          <div className="flex items-center justify-between px-2 sm:px-6 py-4 border-t border-gray-100 mt-4">
+            <div className="text-sm text-gray-600">
               Page {currentPage} of {paymentsData.total_pages}
             </div>
             <div className="flex space-x-2">
               <button
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-3 py-1.5 border border-gray-200 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
               <button
                 onClick={() => setCurrentPage((p) => Math.min(paymentsData.total_pages, p + 1))}
                 disabled={currentPage === paymentsData.total_pages}
-                className="px-3 py-1.5 border rounded-lg disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                className="px-3 py-1.5 border border-gray-200 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50 transition-colors"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -227,7 +240,6 @@ const PaymentsPage = () => {
         )}
       </div>
 
-{/* Receipt Modal */}
       <Modal
         isOpen={showReceiptModal}
         onClose={() => {
@@ -238,16 +250,20 @@ const PaymentsPage = () => {
       >
         {selectedPayment && (
           <div className="space-y-4">
-            <img
-              src={selectedPayment.receipt_url}
-              alt="Payment Receipt"
-              className="w-full rounded-lg border border-gray-300"
-            />
+            <div className="w-full h-96 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
+                <img
+                    src={selectedPayment.receipt_url}
+                    alt="Payment Receipt"
+                    className="object-contain w-full h-full"
+                    onError={(e) => { e.target.onerror = null; e.target.src = "https://via.placeholder.com/600x400?text=Receipt+Not+Available"; }}
+                />
+            </div>
             <a
               href={selectedPayment.receipt_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="btn-primary w-full text-center"
+              className={primaryBtnStyle + " w-full text-center"}
+              style={{ backgroundColor: WMOuBlue }}
             >
               Open in New Tab
             </a>
@@ -255,13 +271,9 @@ const PaymentsPage = () => {
         )}
       </Modal>
 
-      {/* Rejection Modal */}
       <Modal
         isOpen={!!selectedPayment && !showReceiptModal}
-        onClose={() => {
-          setSelectedPayment(null);
-          setRejectionReason('');
-        }}
+        onClose={handleCloseRejectionModal}
         title="Reject Payment"
       >
         <div className="space-y-4">
@@ -271,25 +283,22 @@ const PaymentsPage = () => {
           <textarea
             value={rejectionReason}
             onChange={(e) => setRejectionReason(e.target.value)}
-            className="input"
+            className={inputStyle}
             rows="4"
             placeholder="Enter rejection reason..."
             required
           />
           <div className="flex justify-end space-x-3">
             <button
-              onClick={() => {
-                setSelectedPayment(null);
-                setRejectionReason('');
-              }}
-              className="btn-secondary"
+              onClick={handleCloseRejectionModal}
+              className={secondaryBtnStyle}
             >
               Cancel
             </button>
             <button
               onClick={submitRejection}
-              disabled={approveMutation.isLoading}
-              className="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 disabled:opacity-50"
+              disabled={approveMutation.isLoading || !rejectionReason.trim()}
+              className={`px-4 py-2 rounded-xl font-semibold transition-colors disabled:opacity-50 ${approveMutation.isLoading ? 'bg-red-400' : 'bg-red-600'} text-white hover:bg-red-700`}
             >
               {approveMutation.isLoading ? 'Rejecting...' : 'Reject Payment'}
             </button>
