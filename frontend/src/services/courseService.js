@@ -1,10 +1,12 @@
 import api from './api';
 
 export const courseService = {
-  getCourses: async (session, semester, page = 1, limit = 20) => {
+  getCourses: async (session, semester, department, page = 1, limit = 20) => {
     const params = { page, limit };
     if (session) params.session = session;
     if (semester) params.semester = semester;
+    if (department) params.department = department;
+    
     const response = await api.get('/api/courses', { params });
     return response.data;
   },

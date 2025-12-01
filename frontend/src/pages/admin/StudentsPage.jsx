@@ -6,7 +6,7 @@ import Modal from '../../components/common/Modal';
 import Badge from '../../components/common/Badge';
 import { userService } from '../../services/userService';
 import { toast } from 'react-hot-toast';
-import { UserPlus, Search, ChevronLeft, ChevronRight, UserCheck, UserX } from 'lucide-react';
+import { UserPlus, Search, ChevronLeft, ChevronRight, BookOpen, User, Users } from 'lucide-react';
 import { DEPARTMENTS } from '../../utils/constants';
 
 const WMOuBlue = '#1e3a5f';
@@ -22,6 +22,7 @@ const StudentsPage = () => {
     full_name: '',
     department: '',
     phone: '',
+    // password is not included here as it's auto-generated/defaulted by the backend
   });
 
   const queryClient = useQueryClient();
@@ -35,7 +36,7 @@ const StudentsPage = () => {
   const createMutation = useMutation({
     mutationFn: userService.createUser,
     onSuccess: () => {
-      toast.success('Student created successfully');
+      toast.success('Student created successfully. Login credentials emailed.');
       setShowModal(false);
       queryClient.invalidateQueries(['students']);
       setFormData({
@@ -64,7 +65,8 @@ const StudentsPage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    createMutation.mutate({ ...formData, role: 'student' });
+    // The backend handles setting the default password and emailing the user
+    createMutation.mutate({ ...formData, role: 'student', password: '1234567' });
   };
 
   const filteredStudents = studentsData?.data?.filter(
@@ -94,7 +96,7 @@ const StudentsPage = () => {
   return (
     <AdminLayout>
       <div className="flex justify-between items-center mb-6 relative">
-        <h1 className="text-3xl font-extrabold text-gray-900 ml-10 lg:ml-0">Student Records</h1>
+        <h1 className="text-3xl font-extrabold text-gray-900">Student Records</h1>
         <button 
           onClick={() => {
             setFormData({reg_no: '',email: '',full_name: '',department: '',phone: '',});
@@ -104,11 +106,11 @@ const StudentsPage = () => {
           style={{ backgroundColor: WMOuBlue }}
         >
           <UserPlus className="h-4 w-4 mr-2" />
-          Add Student
+          Add New Student
         </button>
       </div>
       
-      <p className="text-gray-500 mb-6 -mt-4 ml-10 lg:ml-0 hidden lg:block">
+      <p className="text-gray-500 mb-6 -mt-4 hidden lg:block">
         Manage all student accounts and update their status. Total: {studentsData?.total || 0} records
       </p>
 
@@ -117,7 +119,7 @@ const StudentsPage = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
             <div className="flex space-x-4 border-b border-gray-100 pb-2 w-full sm:w-auto">
                 <span className={`py-2 px-4 font-semibold ${WMOuBlueText} border-b-2 border-[#1e3a5f]`}>
-                    All ({studentsData?.total || 0})
+                    All Students ({studentsData?.total || 0})
                 </span>
             </div>
             
@@ -135,42 +137,56 @@ const StudentsPage = () => {
 
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
-            <thead className="bg-white">
+            <thead className="bg-blue-50/50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
                   Reg No
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
                   Department
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                {/* --- NEW COLUMN 1: Course Count (Feature 3) --- */}
+                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                  Courses
+                </th>
+                {/* --- NEW COLUMN 2: Created By (Feature 8) --- */}
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                  Created By
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">
                   Actions
                 </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {filteredStudents?.map((student) => (
-                <tr key={student.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900">
+                <tr key={student.id} className="hover:bg-blue-50/30 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center">
+                    <Users className="w-4 h-4 mr-2 text-gray-400 hidden lg:inline" />
                     {student.full_name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm hidden sm:table-cell">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm hidden sm:table-cell text-blue-600">
                     {student.reg_no}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
-                    {student.email}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {student.department}
+                  </td>
+                  {/* --- NEW DATA CELL 1: Course Count (Feature 3) --- */}
+                  <td className="px-6 py-4 whitespace-nowrap text-center">
+                    <div className="inline-flex items-center text-sm font-semibold text-gray-800 bg-gray-100 px-3 py-1 rounded-full">
+                       <BookOpen className="w-3.5 h-3.5 mr-1.5 text-blue-500" />
+                       {student.registered_courses_count || 0}
+                    </div>
+                  </td>
+                  {/* --- NEW DATA CELL 2: Created By (Feature 8) --- */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
+                    {student.created_by_name || 'Admin'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <Badge status={student.status} />
@@ -182,9 +198,9 @@ const StudentsPage = () => {
                       className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent bg-white shadow-sm hover:border-gray-300 transition"
                       disabled={updateStatusMutation.isLoading}
                     >
-                      <option value="active">Active</option>
-                      <option value="suspended">Suspended</option>
-                      <option value="graduated">Graduated</option>
+                      <option value="ACTIVE">Active</option>
+                      <option value="SUSPENDED">Suspended</option>
+                      <option value="GRADUATED">Graduated</option>
                     </select>
                   </td>
                 </tr>
@@ -220,6 +236,7 @@ const StudentsPage = () => {
         </div>
       </div>
 
+      {/* Add New Student Modal */}
       <Modal isOpen={showModal} onClose={() => setShowModal(false)} title="Add New Student">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 gap-4">
@@ -300,7 +317,7 @@ const StudentsPage = () => {
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
             <p className="text-sm text-blue-800">
-              <strong>Note:</strong> Default password will be set to <code className="bg-blue-100 px-2 py-0.5 rounded">1234567</code>. Student should change it after first login.
+              **Note:** A temporary password (<code className="bg-blue-100 px-2 py-0.5 rounded">1234567</code>) will be set and the login credentials will be **emailed** to the student.
             </p>
           </div>
 

@@ -22,10 +22,12 @@ export const paymentService = {
   },
 
   approvePayment: async (paymentId, approved, rejectionReason) => {
-    const response = await api.patch(`/api/admin/payments/${paymentId}/approve`, {
-      approved,
-      rejection_reason: rejectionReason,
-    });
+    const data = {
+      approved: approved,
+      rejection_reason: rejectionReason || null,
+    };
+    
+    const response = await api.patch(`/api/admin/payments/${paymentId}/approve`, data);
     return response.data;
   },
 };
