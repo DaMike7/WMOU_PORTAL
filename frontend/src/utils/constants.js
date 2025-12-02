@@ -34,3 +34,7 @@ export const DEPARTMENTS = [
   'Information Technology',
   'Data Science',
 ];
+
+export const WHATSAPP_MESSAGE = 'Hello, I need assistance with logging into the student portal.\nI dont have an account yet.';
+
+export const WHATSAPP_LINK = `https://wa.me/${VITE_ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;

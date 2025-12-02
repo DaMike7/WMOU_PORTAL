@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { Mail, Lock, User } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import Turnstile from "react-turnstile";
+import {WHATSAPP_LINK} from '../utils/constants.js'
 
 const Login = () => {
   const [regNo, setRegNo] = useState('');
@@ -114,7 +115,7 @@ const Login = () => {
                 type="button"
                 className="text-sm text-gray-600 hover:text-[#1e3a5f] transition-colors"
               >
-                don't have an account yet? <span><a className='underline font-semibold'>contact admin</a></span>
+                don't have an account yet? <span><a href='{WHATSAPP_LINK}' target='_blank' rel="noopener noreferrer" className='underline font-semibold'>contact admin</a></span>
               </button>
             </div>
 
