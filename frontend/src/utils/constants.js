@@ -35,6 +35,7 @@ export const DEPARTMENTS = [
   'Data Science',
 ];
 
+export const ADMIN_WHATSAPP_NUMBER = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER
 export const WHATSAPP_MESSAGE = 'Hello, I need assistance with logging into the student portal.\nI dont have an account yet.';
 
-export const WHATSAPP_LINK = `https://wa.me/${VITE_ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+export const WHATSAPP_LINK = `https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;

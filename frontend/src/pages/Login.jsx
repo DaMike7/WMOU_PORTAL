@@ -115,7 +115,7 @@ const Login = () => {
                 type="button"
                 className="text-sm text-gray-600 hover:text-[#1e3a5f] transition-colors"
               >
-                don't have an account yet? <span><a href='{WHATSAPP_LINK}' target='_blank' rel="noopener noreferrer" className='underline font-semibold'>contact admin</a></span>
+                don't have an account yet? <span><a href={WHATSAPP_LINK} target='_blank' rel="noopener noreferrer" className='underline font-semibold'>contact admin</a></span>
               </button>
             </div>
 
