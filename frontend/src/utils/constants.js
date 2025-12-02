@@ -21,10 +21,10 @@ export const SEMESTERS = [
 ];
 
 export const SESSIONS = [
-  '2024/2025',
   '2025/2026',
   '2026/2027',
   '2027/2028',
+  '2028/2029',
 ];
 
 export const DEPARTMENTS = [

@@ -8,7 +8,7 @@ const Modal = ({ isOpen, onClose, title, children }) => {
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex items-center justify-center min-h-screen p-4 sm:p-6">
         <div
-          className="fixed inset-0 bg-white bg-opacity-70 backdrop-blur-sm transition-opacity duration-300"
+          className="fixed inset-0 bg-opacity-20 backdrop-blur-sm transition-opacity duration-300"
           onClick={onClose}
         ></div>
 
@@ -32,4 +32,4 @@ const Modal = ({ isOpen, onClose, title, children }) => {
   );
 }
 
-export default Modal
+export default Modal;

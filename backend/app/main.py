@@ -266,7 +266,7 @@ async def create_user(
         "role": user.role,
         "password": hashed_pwd,
         "status": StudentStatus.ACTIVE if user.role == UserRole.STUDENT else None,
-        "created_by": admin["id"], # Task 8: Track creator
+        "created_by": admin["id"],
         "created_at": datetime.utcnow().isoformat()
     }
     
@@ -351,19 +351,18 @@ async def create_course(course: CourseCreate, admin: dict = Depends(get_admin_us
 async def get_courses(
     session: Optional[str] = None,
     semester: Optional[str] = None,
-    department: Optional[str] = None, # Task 1
+    department: Optional[str] = None, 
     page: int = 1,
     limit: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
     """Get courses filtered by dept, with student count (Task 1 & 2)"""
     offset = (page - 1) * limit
-    
-    # Task 2: Get count of students registered for this course
-    query = supabase.table("courses").select("*, course_registrations(count)", count="exact")
+    query = supabase.table("courses").select("*, course_registrations(count)")
     
     # Filter logic
     if current_user["role"] == UserRole.STUDENT:
+        # Student access is restricted to their department
         query = query.eq("department", current_user["department"])
     elif department:
         query = query.eq("department", department)
@@ -373,11 +372,10 @@ async def get_courses(
     if semester:
         query = query.eq("semester", semester)
     
-    response = query.range(offset, offset + limit - 1).execute()
+    response = query.range(offset, offset + limit - 1).execute(count='exact')
     
     courses = []
     for course in response.data:
-        # Flatten the count structure
         course['enrolled_students'] = course.get('course_registrations', [{}])[0].get('count', 0)
         courses.append(course)
 

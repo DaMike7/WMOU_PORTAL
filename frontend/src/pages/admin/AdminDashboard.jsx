@@ -1,6 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import AdminLayout from './AdminLayout';
+import { Link } from 'react-router-dom';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { dashboardService } from '../../services/dashboardService';
 import { Users, BookOpen, DollarSign, Clock, CreditCard, Bell, GraduationCap, TrendingUp, ChevronRight } from 'lucide-react';
@@ -116,7 +117,7 @@ const RevenueBarChart = ({ data }) => {
     <div className="bg-white p-6 rounded-2xl shadow-xl h-full transition duration-300 hover:shadow-2xl">
       <h3 className="text-xl font-bold text-gray-800 mb-6 flex items-center">
         <TrendingUp className="w-5 h-5 mr-2 text-indigo-600" />
-        Monthly Revenue Dynamics
+        Monthly Revenue
       </h3>
       <div className="h-64">
         <Bar data={chartData} options={options} />
@@ -212,10 +213,12 @@ const AdminDashboard = () =>{
               <CountUp start={0} end={pendingCount} duration={2.5} />
             </span> unreviewed {pendingCount === 1 ? 'payment' : 'payments'} waiting for your approval.
           </p>
-          <button className="mt-4 flex items-center text-sm font-semibold bg-white text-blue-600 py-2 px-4 rounded-lg shadow-md hover:bg-gray-100 transition duration-150">
-             Review Payments Now 
-             <ChevronRight className="w-4 h-4 ml-1" />
-          </button>
+          <Link to='/admin/payments'>
+            <button className="mt-4 flex items-center text-sm font-semibold bg-white text-blue-600 py-2 px-4 rounded-lg shadow-md hover:bg-gray-100 transition duration-150">
+              Review Payments Now 
+              <ChevronRight className="w-4 h-4 ml-1" />
+            </button>
+          </Link>
         </div>
       </div>
 
@@ -290,7 +293,7 @@ const AdminDashboard = () =>{
         <div className="bg-white p-6 rounded-2xl shadow-xl lg:col-span-1 transition duration-300 hover:shadow-2xl">
           <h2 className="text-xl font-bold text-gray-900 flex items-center mb-4 border-b pb-2">
             <Bell className="w-5 h-5 mr-2 text-blue-600" />
-            Latest System Announcements
+            Latest Announcements
           </h2>
           <ul className="divide-y divide-gray-200">
             {metrics.activity.latest_announcements?.length > 0 ? (

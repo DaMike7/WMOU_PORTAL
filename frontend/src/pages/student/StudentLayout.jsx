@@ -23,7 +23,6 @@ const WMOuPortalName = 'WMOU Portal'; // Defined name
 const StudentLayout = ({ children }) => {
   const { user, logout } = useAuthStore();
   const navigate = useNavigate();
-  // 1. State to manage the mobile sidebar visibility
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
 
   const handleLogout = () => {
@@ -42,17 +41,14 @@ const StudentLayout = ({ children }) => {
     { path: '/student/profile', icon: User, label: 'Profile' },
   ];
 
-  // Extracted sidebar content into a component/function for reuse on desktop and mobile
   const SidebarContent = (
     <div className="p-4 pt-8 text-white space-y-8 h-full flex flex-col">
-      {/* Logo and Name Section */}
       <div className="flex items-center space-x-3 mb-8">
         <img src='/wmou.png' className='w-10 h-10' alt="WMOu Logo" />
         <h1 className="text-xl font-bold">{WMOuPortalName}</h1>
       </div>
 
-      {/* Navigation Menu */}
-      <nav className="space-y-2 flex-grow">
+      <nav className="space-y-2 flex-grow overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
           const isActive = location.pathname.startsWith(item.path);
@@ -60,7 +56,6 @@ const StudentLayout = ({ children }) => {
             <Link
               key={item.path}
               to={item.path}
-              // Close sidebar on mobile navigation
               onClick={() => setIsSidebarOpen(false)} 
               className={`flex items-center space-x-3 px-4 py-3 rounded-xl transition-all font-medium relative
                 ${isActive
@@ -68,11 +63,9 @@ const StudentLayout = ({ children }) => {
                   : 'text-white hover:bg-white/20' 
                 }`}
             >
-              {/* The icon and label */}
               <Icon className="h-5 w-5" />
               <span>{item.label}</span>
 
-              {/* This is the subtle indicator line often seen in this type of design */}
               {isActive && (
                 <div className="absolute left-0 top-0 bottom-0 w-1 bg-current rounded-l-full"></div>
               )}
@@ -81,7 +74,6 @@ const StudentLayout = ({ children }) => {
         })}
       </nav>
 
-      {/* Logout Button */}
       <div className="mt-auto pt-4">
         <button
           onClick={handleLogout}
@@ -97,7 +89,6 @@ const StudentLayout = ({ children }) => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       
-      {/* 2. Mobile Menu Button (Hamburger) */}
       <button
         className="fixed top-4 left-4 z-40 lg:hidden p-2 text-gray-700 bg-white rounded-full shadow-md"
         onClick={() => setIsSidebarOpen(true)}
@@ -105,27 +96,23 @@ const StudentLayout = ({ children }) => {
         <Menu className="h-6 w-6" />
       </button>
 
-      {/* Desktop Sidebar (Always Visible) */}
+      {/* Desktop Sidebar - Fixed and Sticky */}
       <div
-        className={`w-64 min-h-screen ${WMOuBlue} shadow-xl relative hidden lg:block`}
+        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:block`}
       >
         {SidebarContent}
       </div>
 
-      {/* 3. Mobile Sidebar (Conditional Visibility) */}
       {isSidebarOpen && (
         <>
-          {/* Overlay to close sidebar on click */}
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            className="fixed inset-0 bg-opacity-30 z-40 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           ></div>
 
-          {/* Sidebar Panel */}
           <div
             className={`fixed top-0 left-0 w-64 h-full ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden`}
           >
-            {/* Close Button on Mobile Sidebar */}
             <button
               className="absolute top-4 right-4 text-white p-1 z-50"
               onClick={() => setIsSidebarOpen(false)}
@@ -137,8 +124,8 @@ const StudentLayout = ({ children }) => {
         </>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 p-4 sm:p-8 overflow-y-auto pt-16 lg:pt-0">
+      {/* Main Content - Add left margin to account for fixed sidebar */}
+      <div className="flex-1 p-4 sm:p-8 overflow-y-auto pt-16 lg:pt-0 lg:ml-64">
         <div className="hidden lg:block">
           <Navbar />
         </div>

@@ -2,6 +2,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from app.core.config import settings 
+from datetime import datetime, timedelta
 
 class EmailService:
     def __init__(self):

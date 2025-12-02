@@ -6,7 +6,7 @@ import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Modal from '../../components/common/Modal';
 import { courseService } from '../../services/courseService';
 import { toast } from 'react-hot-toast';
-import { BookOpen, Plus, Pencil, Trash2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { BookOpen, Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Filter, Users } from 'lucide-react';
 import { DEPARTMENTS, SESSIONS, SEMESTERS } from '../../utils/constants';
 import { formatCurrency } from '../../utils/helpers';
 
@@ -15,17 +15,12 @@ const WMOuBlue = '#1e3a5f'; // Theme color
 const WMOuBlueBg = 'bg-[#1e3a5f]';
 const WMOuBlueText = 'text-[#1e3a5f]';
 
-// Course Form Component (Extracted for better readability and to apply new input styles)
+// Course Form Component (Remains largely the same, but kept for context)
 const CourseForm = ({ formData, setFormData, handleSubmit, isEditing, createMutation, updateMutation, resetForm, onClose }) => {
     const isMutating = createMutation.isLoading || updateMutation.isLoading;
 
-    // Helper for applying new input styles (clean, rounded)
     const inputStyle = "w-full px-4 py-2 border border-gray-200 rounded-xl focus:ring-2 focus:ring-opacity-50 focus:ring-[#1e3a5f]/50 focus:border-[#1e3a5f] transition duration-150 ease-in-out shadow-sm";
-    
-    // Helper for primary button style
     const primaryBtnStyle = `px-4 py-2 text-white rounded-xl font-semibold transition-colors disabled:opacity-50`;
-    
-    // Helper for secondary button style
     const secondaryBtnStyle = `px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-colors`;
     
     return (
@@ -174,6 +169,7 @@ const CoursesPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingCourse, setEditingCourse] = useState(null);
     const [currentPage, setCurrentPage] = useState(1);
+    const [selectedDepartment, setSelectedDepartment] = useState(null); // Feature 1: Department Filter
     const [formData, setFormData] = useState({
         course_code: '',
         title: '',
@@ -185,11 +181,19 @@ const CoursesPage = () => {
 
     const queryClient = useQueryClient();
 
-    const { data: coursesData, isLoading } = useQuery({
-        queryKey: ['adminCourses', currentPage],
-        queryFn: () => courseService.getCourses(null, null, currentPage, 20),
+    const { data: coursesData, isLoading, isPreviousData } = useQuery({
+        // Include selectedDepartment in queryKey to refetch when filter changes
+        queryKey: ['adminCourses', currentPage, selectedDepartment],
+        // Pass the department filter to the service call
+        queryFn: () => courseService.getCourses(selectedDepartment, null, currentPage, 20),
         keepPreviousData: true,
     });
+
+    // Reset page to 1 when department filter changes
+    const handleDepartmentChange = (dept) => {
+        setSelectedDepartment(dept);
+        setCurrentPage(1);
+    };
 
     const createMutation = useMutation({
         mutationFn: courseService.createCourse,
@@ -278,7 +282,7 @@ const CoursesPage = () => {
         );
     }
     
-    // Function to mimic the status badge (assuming 'Active' status is default/all)
+    // Function to mimic the status badge
     const renderStatusBadge = () => (
         <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
             Active
@@ -287,9 +291,9 @@ const CoursesPage = () => {
 
     return (
         <AdminLayout>
-            {/* Header Section: Ensures responsiveness and alignment with mobile menu */}
+            {/* Header Section */}
             <div className="flex justify-between items-center mb-6 relative">
-                <h1 className="text-3xl font-extrabold text-gray-900 ml-10 lg:ml-0">Course Management</h1>
+                <h1 className="text-3xl font-extrabold text-gray-900">Course Management</h1>
                 <button
                     onClick={() => {
                         resetForm();
@@ -304,60 +308,73 @@ const CoursesPage = () => {
                 </button>
             </div>
             
-            <p className="text-gray-500 mb-6 -mt-4 ml-10 lg:ml-0 hidden lg:block">
+            <p className="text-gray-500 mb-6 -mt-4 hidden lg:block">
                 Manage your courses, departments, and fees. Total: {coursesData?.total || 0} courses
             </p>
 
-            {/* Main Content Card - Clean, rounded white card matching the design */}
+            {/* Main Content Card */}
             <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
                 
-                {/* Tabs (Mimicking the EduDash design, simplifying to just "All") */}
-                <div className="flex space-x-4 border-b border-gray-100 mb-6 pb-2">
-                    <span className={`py-2 px-4 font-semibold ${WMOuBlueText} border-b-2 border-[#1e3a5f]`}>
-                        All ({coursesData?.total || 0})
-                    </span>
-                    {/* Placeholder tabs if needed: 
-                    <span className="py-2 px-4 font-medium text-gray-500 hover:text-gray-700 cursor-pointer">
-                        Archived (0)
-                    </span> */}
+                <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+                    {/* Department Filter (Feature 1) */}
+                    <div className="flex items-center space-x-2 w-full sm:w-auto">
+                         <Filter className="w-5 h-5 text-gray-500" />
+                        <select
+                            value={selectedDepartment || ""}
+                            onChange={(e) => handleDepartmentChange(e.target.value || null)}
+                            className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent bg-white shadow-sm hover:border-gray-300 transition w-full sm:w-56"
+                        >
+                            <option value="">All Departments ({coursesData?.total || 0})</option>
+                            {DEPARTMENTS.map((dept) => (
+                                <option key={dept} value={dept}>
+                                    {dept}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Simple Total Count Badge */}
+                    <div className="py-2 px-4 font-semibold text-white rounded-xl" style={{ backgroundColor: WMOuBlue }}>
+                         <Users className="w-4 h-4 mr-1 inline" /> Students Enrolled: {coursesData?.data?.reduce((sum, course) => sum + (course.students_count || 0), 0) || 0}
+                    </div>
                 </div>
 
-
-                {/* Table Section - Styled to match the EduDash clean table */}
+                {/* Table Section */}
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100">
-                        <thead className="bg-white">
+                        <thead className="bg-blue-50/50">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">
                                     Course Name
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                     Code
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
                                     Department
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
                                     Session/Semester
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                {/* --- NEW COLUMN: Student Count (Feature 2) --- */}
+                                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-700 uppercase tracking-wider">
+                                    Students
+                                </th>
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                     Fee
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">
                                     Actions
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
                             {coursesData?.data?.map((course) => (
-                                <tr key={course.id} className="hover:bg-gray-50 transition-colors">
+                                <tr key={course.id} className="hover:bg-blue-50/30 transition-colors">
                                     <td className="px-6 py-4 whitespace-normal font-medium text-gray-900">
                                         {course.title}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap font-mono font-bold text-sm">
+                                    <td className="px-6 py-4 whitespace-nowrap font-mono font-bold text-sm text-blue-600">
                                         {course.course_code}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
@@ -366,11 +383,12 @@ const CoursesPage = () => {
                                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
                                         {course.session} ({course.semester.split(' ')[0]})
                                     </td>
+                                    {/* --- NEW DATA CELL: Student Count (Feature 2) --- */}
+                                    <td className="px-6 py-4 whitespace-nowrap text-center font-bold text-gray-800">
+                                        {course.students_count || 0}
+                                    </td>
                                     <td className="px-6 py-4 whitespace-nowrap font-bold text-gray-700">
                                         {formatCurrency(course.fee)}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
-                                        {renderStatusBadge()}
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
                                         <div className="flex space-x-1">
@@ -392,6 +410,11 @@ const CoursesPage = () => {
                             ))}
                         </tbody>
                     </table>
+                     {coursesData?.total === 0 && (
+                        <div className="text-center py-8 text-gray-500 text-lg">
+                           No courses found {selectedDepartment ? `in ${selectedDepartment}.` : 'in the system.'}
+                        </div>
+                    )}
                 </div>
 
                 {/* Pagination */}
@@ -399,6 +422,7 @@ const CoursesPage = () => {
                     <div className="flex items-center justify-between px-2 sm:px-6 py-4 border-t border-gray-100 mt-4">
                         <div className="text-sm text-gray-600">
                             Page {currentPage} of {coursesData.total_pages}
+                            {isPreviousData && ' (loading next page...)'}
                         </div>
                         <div className="flex space-x-2">
                             <button

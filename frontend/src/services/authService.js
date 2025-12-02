@@ -43,4 +43,8 @@ export const authService = {
     });
     return response.data;
   },
+  getCreatorDetails: async (userId) => {
+  const response = await api.get(`/api/admin/users/${userId}`);
+  return response.data;
+},
 };

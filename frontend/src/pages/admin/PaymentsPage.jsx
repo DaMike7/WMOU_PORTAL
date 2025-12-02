@@ -6,7 +6,7 @@ import Badge from '../../components/common/Badge';
 import Modal from '../../components/common/Modal';
 import { paymentService } from '../../services/paymentService';
 import { toast } from 'react-hot-toast';
-import { CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight, Filter } from 'lucide-react';
+import { CheckCircle, XCircle, Eye, ChevronLeft, ChevronRight, Filter, Info } from 'lucide-react'; // Added Info icon
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 
 const WMOuBlue = '#1e3a5f';
@@ -20,6 +20,7 @@ const PaymentsPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedPayment, setSelectedPayment] = useState(null);
   const [showReceiptModal, setShowReceiptModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false); // New state for details modal
   const [rejectionReason, setRejectionReason] = useState('');
 
   const queryClient = useQueryClient();
@@ -34,10 +35,12 @@ const PaymentsPage = () => {
     mutationFn: ({ paymentId, approved, rejectionReason }) =>
       paymentService.approvePayment(paymentId, approved, rejectionReason),
     onSuccess: (data, variables) => {
-      toast.success(variables.approved ? 'Payment approved' : 'Payment rejected');
+      // Logic for handling both approval and rejection success
+      toast.success(variables.approved ? 'Payment approved. Student has been registered for the course.' : 'Payment rejected. Notification sent to student.');
       queryClient.invalidateQueries(['adminPayments']);
       setSelectedPayment(null);
       setRejectionReason('');
+      setShowDetailsModal(false); // Close the rejection modal on success
     },
     onError: (error) => {
       toast.error(error.response?.data?.detail || 'Failed to process payment');
@@ -45,7 +48,7 @@ const PaymentsPage = () => {
   });
 
   const handleApprove = (payment) => {
-    if (window.confirm('Are you sure you want to approve this payment?')) {
+    if (window.confirm(`Are you sure you want to approve the ${formatCurrency(payment.amount_paid)} payment for ${payment.users?.full_name}?`)) {
       approveMutation.mutate({
         paymentId: payment.id,
         approved: true,
@@ -55,14 +58,17 @@ const PaymentsPage = () => {
 
   const handleReject = (payment) => {
     setSelectedPayment(payment);
+    setShowDetailsModal(true); // Use the details modal for rejection input
   };
 
+  // Submit rejection logic now moved to this component
   const submitRejection = () => {
     if (!rejectionReason.trim()) {
       toast.error('Please provide a rejection reason');
       return;
     }
-
+    
+    // Call the mutation with 'approved: false' and the reason
     approveMutation.mutate({
       paymentId: selectedPayment.id,
       approved: false,
@@ -73,7 +79,14 @@ const PaymentsPage = () => {
   const handleCloseRejectionModal = () => {
     setSelectedPayment(null);
     setRejectionReason('');
+    setShowDetailsModal(false);
   };
+
+  // Function to handle viewing status details (rejection reason or approval details)
+  const handleViewDetails = (payment) => {
+    setSelectedPayment(payment);
+    setShowDetailsModal(true);
+  }
 
   if (isLoading) {
     return (
@@ -82,6 +95,11 @@ const PaymentsPage = () => {
       </AdminLayout>
     );
   }
+
+  // Determine if the current modal should be the Rejection Modal or the Details Modal
+  const isRejectionModalOpen = !!selectedPayment && showDetailsModal && selectedPayment.status === 'pending';
+  const isDetailsModalOpen = !!selectedPayment && showDetailsModal && selectedPayment.status !== 'pending';
+
 
   return (
     <AdminLayout>
@@ -145,6 +163,9 @@ const PaymentsPage = () => {
                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                  Reviewer
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
@@ -200,10 +221,18 @@ const PaymentsPage = () => {
                         </button>
                       </div>
                     ) : (
-                      <span className={`text-sm font-medium ${payment.status === 'approved' ? 'text-green-600' : 'text-red-600'}`}>
-                        {payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}
-                      </span>
+                      <button
+                         onClick={() => handleViewDetails(payment)}
+                         className={`text-sm font-medium p-2 rounded-lg transition ${payment.status === 'approved' ? 'text-green-600 hover:bg-green-50' : 'text-red-600 hover:bg-red-50'}`}
+                         title="View Details"
+                      >
+                         <Info className="h-5 w-5 mx-auto" />
+                      </button>
                     )}
+                  </td>
+                  {/* Reviewer Column (Feature 5) */}
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 hidden lg:table-cell">
+                    {payment.reviewed_by_name || 'N/A'}
                   </td>
                 </tr>
               ))}
@@ -240,6 +269,7 @@ const PaymentsPage = () => {
         )}
       </div>
 
+      {/* Receipt View Modal (Unchanged) */}
       <Modal
         isOpen={showReceiptModal}
         onClose={() => {
@@ -271,39 +301,65 @@ const PaymentsPage = () => {
         )}
       </Modal>
 
+      {/* Rejection/Details Modal (Consolidated) */}
       <Modal
-        isOpen={!!selectedPayment && !showReceiptModal}
+        // Open if a payment is selected AND the details/rejection modal is active (and not the receipt modal)
+        isOpen={showDetailsModal}
         onClose={handleCloseRejectionModal}
-        title="Reject Payment"
+        title={selectedPayment?.status === 'pending' ? "Reject Payment" : "Payment Details"}
       >
-        <div className="space-y-4">
-          <p className="text-gray-700">
-            Please provide a reason for rejecting this payment:
-          </p>
-          <textarea
-            value={rejectionReason}
-            onChange={(e) => setRejectionReason(e.target.value)}
-            className={inputStyle}
-            rows="4"
-            placeholder="Enter rejection reason..."
-            required
-          />
-          <div className="flex justify-end space-x-3">
-            <button
-              onClick={handleCloseRejectionModal}
-              className={secondaryBtnStyle}
-            >
-              Cancel
-            </button>
-            <button
-              onClick={submitRejection}
-              disabled={approveMutation.isLoading || !rejectionReason.trim()}
-              className={`px-4 py-2 rounded-xl font-semibold transition-colors disabled:opacity-50 ${approveMutation.isLoading ? 'bg-red-400' : 'bg-red-600'} text-white hover:bg-red-700`}
-            >
-              {approveMutation.isLoading ? 'Rejecting...' : 'Reject Payment'}
-            </button>
+        {selectedPayment && (
+          <div className="space-y-4">
+            {/* Display for Approved/Rejected Statuses */}
+            {selectedPayment.status !== 'pending' && (
+              <div className={`p-3 rounded-lg ${selectedPayment.status === 'approved' ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                <p className="font-semibold mb-1">Status: {selectedPayment.status.toUpperCase()}</p>
+                <p className="text-sm">Processed by: **{selectedPayment.reviewed_by_name || 'N/A'}** on {formatDateTime(selectedPayment.reviewed_at)}</p>
+                {selectedPayment.rejection_reason && (
+                  <p className="mt-2 text-sm">
+                    **Reason for Rejection:** {selectedPayment.rejection_reason}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Rejection Input for Pending Status */}
+            {selectedPayment.status === 'pending' && (
+              <>
+                <p className="text-gray-700">
+                  Please provide a reason for rejecting this payment:
+                </p>
+                <textarea
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  className={inputStyle}
+                  rows="4"
+                  placeholder="Enter rejection reason..."
+                  required
+                />
+              </>
+            )}
+            
+            <div className="flex justify-end space-x-3 border-t pt-3 mt-4">
+              <button
+                onClick={handleCloseRejectionModal}
+                className={secondaryBtnStyle}
+                disabled={approveMutation.isLoading}
+              >
+                Close
+              </button>
+              {selectedPayment.status === 'pending' && (
+                <button
+                  onClick={submitRejection}
+                  disabled={approveMutation.isLoading || !rejectionReason.trim()}
+                  className={`px-4 py-2 rounded-xl font-semibold transition-colors disabled:opacity-50 ${approveMutation.isLoading ? 'bg-red-400' : 'bg-red-600'} text-white hover:bg-red-700`}
+                >
+                  {approveMutation.isLoading ? 'Rejecting...' : 'Reject Payment'}
+                </button>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </Modal>
     </AdminLayout>
   );

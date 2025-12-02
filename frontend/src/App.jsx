@@ -14,6 +14,9 @@ import CoursesPage from './pages/admin/CoursesPage';
 import PaymentsPage from './pages/admin/PaymentsPage';
 import MaterialsPage from './pages/admin/MaterialsPage';
 import AnnouncementsPage from './pages/admin/AnnouncementsPage';
+import AdminUsersPage from './pages/admin/AdminUsersPage';
+import ResultsPage from './pages/admin/AdminResultsPage';
+import AdminProfilePage from './pages/admin/AdminProfilePage';
 
 // Student Pages
 import StudentDashboard from './pages/student/StudentDashboard';
@@ -71,6 +74,14 @@ function App() {
             }
           />
           <Route
+            path="/admin/administrators"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminUsersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/students"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
@@ -103,10 +114,26 @@ function App() {
             }
           />
           <Route
+            path="/admin/students/results"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <ResultsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/admin/announcements"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AnnouncementsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/profile"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminProfilePage />
               </ProtectedRoute>
             }
           />

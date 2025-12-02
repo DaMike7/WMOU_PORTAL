@@ -14,6 +14,9 @@ import {
   LogOut,
   Menu, 
   X,  
+  ShieldUser,
+  BookOpenText,
+  UserStar,
 } from 'lucide-react';
 
 const WMOuBlue = 'bg-[#1e3a5f]'
@@ -33,11 +36,14 @@ const AdminLayout = ({ children }) => {
 
   const menuItems = [
     { path: '/admin/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+    { path: '/admin/administrators', icon: ShieldUser, label: 'Administrators' },
     { path: '/admin/students', icon: Users, label: 'Students' },
     { path: '/admin/courses', icon: BookOpen, label: 'Courses' },
     { path: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { path: '/admin/materials', icon: FileText, label: 'Materials' },
+    { path: '/admin/results/student', icon: BookOpenText, label: 'Students Results' },
     { path: '/admin/announcements', icon: Megaphone, label: 'Announcements' },
+    { path: '/admin/profile', icon: UserStar, label: 'Profile' },
   ];
 
   const SidebarContent = (
@@ -92,6 +98,7 @@ const AdminLayout = ({ children }) => {
 
 
   return (
+    // FIX 1: Ensure the outer container dictates the overall scroll if necessary
     <div className="min-h-screen bg-gray-50 flex">
       
       {/* Mobile Menu Button (Hamburger) */}
@@ -102,27 +109,26 @@ const AdminLayout = ({ children }) => {
         <Menu className="h-6 w-6" />
       </button>
 
-      {/* Desktop Sidebar (Always Visible) */}
+      {/* Desktop Sidebar (Fixed) */}
       <div
-        className={`w-64 min-h-screen ${WMOuBlue} shadow-xl relative hidden lg:block`}
+        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:block z-30`}
       >
         {SidebarContent}
       </div>
+      
+      {/* Spacer for Fixed Sidebar */}
+      <div className="hidden lg:block w-64 flex-shrink-0"></div>
 
-      {/* Mobile Sidebar (Conditional Visibility) */}
+      {/* Mobile Sidebar (Fixed) */}
       {isSidebarOpen && (
         <>
-          {/* Overlay to close sidebar on click */}
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+            className="fixed inset-0 bg-opacity-50 z-40 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           ></div>
-
-          {/* Sidebar Panel */}
           <div
             className={`fixed top-0 left-0 w-64 h-full ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden`}
           >
-            {/* Close Button on Mobile Sidebar */}
             <button
               className="absolute top-4 right-4 text-white p-1 z-50"
               onClick={() => setIsSidebarOpen(false)}
@@ -134,12 +140,21 @@ const AdminLayout = ({ children }) => {
         </>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 p-4 sm:p-8 overflow-y-auto pt-16 lg:pt-0">
-        <div className="hidden lg:block">
+      {/* Main Content Container */}
+      <div className="flex-1 flex flex-col min-h-screen"> 
+        
+        {/* FIX 2: Navbar moved here, outside the children's scrolling area, and made full-width. */}
+        <header className="hidden lg:block sticky top-0 z-20 bg-gray-50 pt-8 px-8 pb-4">
           <Navbar />
-        </div>
-        {children}
+        </header>
+
+        {/* The main scrollable content area */}
+        <main className="flex-1 p-4 sm:p-8 pt-0 overflow-y-auto"> 
+          <div className="block lg:hidden pt-8">
+             <Navbar /> {/* Keep a version for smaller screens, if needed */}
+          </div>
+          {children}
+        </main>
       </div>
     </div>
   );

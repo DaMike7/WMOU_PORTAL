@@ -1,54 +1,55 @@
 import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-// Assuming these imports resolve correctly in your environment:
-import StudentLayout from './StudentLayout'; 
+import { toast } from 'react-hot-toast';
+import { User, Camera, Lock, Mail, Phone, Home, X, Save, Shield, UserPlus } from 'lucide-react';
+
+// External application imports (must be available in your project structure)
+import AdminLayout from './AdminLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner'; 
 import Modal from '../../components/common/Modal'; 
 import { authService } from '../../services/authService';
 import { useAuthStore } from '../../store/authStore';
-import { toast } from 'react-hot-toast';
-import { User, Camera, Lock, Mail, Phone, Home, X, Save } from 'lucide-react';
 
-// --- STYLING CONSTANTS (WMOu Blue Theme) ---
+
 const WMOuBlue = '#1e3a5f'; 
 const WMOuBlueBg = 'bg-[#1e3a5f]';
 const WMOuBlueText = 'text-[#1e3a5f]';
 const WMOuBlueHover = 'hover:bg-[#152945]';
 
-// Base Input Styling
 const baseInputStyle = "w-full px-4 py-3 border rounded-xl shadow-sm transition-colors duration-150";
 const editableInputStyle = `${baseInputStyle} border-gray-300 focus:ring-2 focus:ring-opacity-50 focus:ring-[#1e3a5f]/50 focus:border-[#1e3a5f]`;
 const disabledInputStyle = `${baseInputStyle} border-gray-200 bg-gray-50 text-gray-500 cursor-not-allowed`;
 
-// Base Button Styling
 const baseButtonStyle = "py-3 px-6 rounded-xl font-semibold shadow-md transition-all duration-200";
 
-const ProfilePage = () =>{
+const AdminProfilePage = () =>{
   const { user, updateUser } = useAuthStore();
   
-  // State for UI/Modals
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [editMode, setEditMode] = useState(false);
   
-  // State for editable form data, initialized with user store data
   const [profileData, setProfileData] = useState({
     email: user?.email || '',
     phone: user?.phone || '',
     address: user?.address || '',
   });
 
-  // State for password change form
   const [passwordData, setPasswordData] = useState({
     old_password: '',
     new_password: '',
     confirm_password: '',
   });
 
-  const queryClient = useQueryClient();
+const { data: creator, isLoading: isCreatorLoading } = useQuery({
+  queryKey: ['adminCreator', user?.created_by],
+  queryFn: async () => {
+    const response = await api.get(`/api/admin/users/${user.created_by}`);
+    return response.data;
+  },
+  enabled: !!user?.created_by,
+});
 
-  // Effect to re-sync local profileData with global user store when user changes
-  // This ensures that when the component mounts or the global user state updates (e.g., after login),
-  // the form fields reflect the correct data.
+  // Effect to keep local form data in sync with global user store data when user changes
   useEffect(() => {
     if (user) {
       setProfileData({
@@ -60,7 +61,6 @@ const ProfilePage = () =>{
   }, [user]);
 
   // --- Mutations ---
-
   const updateMutation = useMutation({
     mutationFn: authService.updateProfile,
     onSuccess: (data) => {
@@ -71,7 +71,8 @@ const ProfilePage = () =>{
       queryClient.invalidateQueries(['profile']);
     },
     onError: (error) => {
-      toast.error(error.response?.data?.detail || 'Failed to update profile');
+      const errorMessage = error.response?.data?.detail || 'Failed to update profile';
+      toast.error(errorMessage);
     },
   });
 
@@ -79,11 +80,13 @@ const ProfilePage = () =>{
     mutationFn: authService.uploadProfilePicture,
     onSuccess: (data) => {
       toast.success('Profile picture updated');
+      // Update the global store with the new picture URL
       updateUser({ ...user, profile_picture_url: data.url });
       queryClient.invalidateQueries(['profile']);
     },
     onError: (error) => {
-      toast.error('Failed to upload picture');
+      const errorMessage = error.response?.data?.detail || 'Failed to upload picture';
+      toast.error(errorMessage);
     },
   });
 
@@ -99,14 +102,17 @@ const ProfilePage = () =>{
       });
     },
     onError: (error) => {
-      toast.error(error.response?.data?.detail || 'Failed to change password');
+      const errorMessage = error.response?.data?.detail || 'Failed to change password';
+      toast.error(errorMessage);
     },
   });
 
   // --- Handlers ---
-
   const handleProfileUpdate = () => {
-    // Perform validation if needed, then mutate
+    if (!profileData.email) {
+      toast.error("Email is required.");
+      return;
+    }
     updateMutation.mutate(profileData);
   };
 
@@ -119,6 +125,11 @@ const ProfilePage = () =>{
        toast.error('New password must be at least 8 characters long');
       return;
     }
+    if (!passwordData.old_password || !passwordData.new_password) {
+       toast.error('Please fill out all password fields.');
+      return;
+    }
+
     changePasswordMutation.mutate({
       old_password: passwordData.old_password,
       new_password: passwordData.new_password,
@@ -133,7 +144,7 @@ const ProfilePage = () =>{
   };
 
   const handleCancelEdit = () => {
-    // Reset local state to match global user state
+    // Reset local state to match current global user state
     setProfileData({
       email: user?.email || '',
       phone: user?.phone || '',
@@ -142,74 +153,100 @@ const ProfilePage = () =>{
     setEditMode(false);
   }
 
-  // Helper to determine input class based on edit mode
   const getInputClass = (isEditable) => {
     if (isEditable && editMode) return editableInputStyle;
     return disabledInputStyle;
   };
   
-  // --- RENDERING ---
-  // Display a spinner if user data is still loading from the global store
   if (!user) {
     return <LoadingSpinner />; 
   }
 
   return (
-    <StudentLayout>
+    <AdminLayout>
       <h1 className={`text-3xl font-extrabold ${WMOuBlueText} mb-8 border-b border-gray-200 pb-2`}>
-        My Profile
+        Admin Profile
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        
         {/* Profile Picture & Info Card (Column 1) */}
-        <div className="lg:col-span-1 bg-white p-6 rounded-2xl shadow-xl border border-gray-100 h-fit sticky top-6">
-          <div className="relative inline-block mb-4 w-32 h-32 mx-auto">
-            {/* Profile Picture */}
-            {user.profile_picture_url ? (
-              <img
-                src={user.profile_picture_url}
-                alt="Profile"
-                className="h-full w-full rounded-full object-cover mx-auto ring-4 ring-gray-200 shadow-inner"
-              />
-            ) : (
-              <div className={`h-full w-full rounded-full ${WMOuBlueBg} flex items-center justify-center mx-auto shadow-inner`}>
-                <User className="h-16 w-16 text-white" />
-              </div>
-            )}
-            {/* Upload Button */}
-            <label 
-              className={`absolute bottom-0 right-0 ${WMOuBlueBg} text-white p-2 rounded-full cursor-pointer transition-colors ${WMOuBlueHover} shadow-lg ring-4 ring-white`}>
-              {uploadPictureMutation.isLoading ? (
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+        <div className="lg:col-span-1 space-y-8">
+          <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100 h-fit sticky top-6">
+            <div className="relative inline-block mb-4 w-32 h-32 mx-auto">
+              {/* Profile Picture */}
+              {user.profile_picture_url ? (
+                <img
+                  src={user.profile_picture_url}
+                  alt="Profile"
+                  className="h-full w-full rounded-full object-cover mx-auto ring-4 ring-gray-200 shadow-inner"
+                />
               ) : (
-                <Camera className="h-4 w-4" />
+                <div className={`h-full w-full rounded-full ${WMOuBlueBg} flex items-center justify-center mx-auto shadow-inner`}>
+                  <User className="h-16 w-16 text-white" />
+                </div>
               )}
-              <input
-                type="file"
-                className="hidden"
-                accept="image/*"
-                onChange={handlePictureUpload}
-                disabled={uploadPictureMutation.isLoading}
-              />
-            </label>
+              {/* Upload Button */}
+              <label 
+                className={`absolute bottom-0 right-0 ${WMOuBlueBg} text-white p-2 rounded-full cursor-pointer transition-colors ${WMOuBlueHover} shadow-lg ring-4 ring-white`}>
+                {uploadPictureMutation.isLoading ? (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                ) : (
+                  <Camera className="h-4 w-4" />
+                )}
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={handlePictureUpload}
+                  disabled={uploadPictureMutation.isLoading}
+                />
+              </label>
+            </div>
+            
+            <div className="text-center mt-4">
+              <h2 className="text-2xl font-bold text-gray-900">{user.full_name || 'Admin Name'}</h2>
+              <p className="text-sm text-gray-600 font-mono mt-1">{user.reg_no || 'N/A'}</p>
+              <p className="text-md font-semibold text-gray-700 mt-2 capitalize flex items-center justify-center">
+                <Shield className="w-4 h-4 mr-1 text-green-500" /> 
+                {user.title || user.role}
+              </p>
+            </div>
+            
+            <div className="mt-6 pt-4 border-t border-gray-100 flex justify-center">
+              <button
+                onClick={() => setShowPasswordModal(true)}
+                className={`flex items-center space-x-2 text-sm font-medium ${WMOuBlueText} hover:underline`}
+              >
+                <Lock className="h-4 w-4" />
+                <span>Change Password</span>
+              </button>
+            </div>
           </div>
           
-          <div className="text-center mt-4">
-            <h2 className="text-2xl font-bold text-gray-900">{user.full_name || 'Student Name'}</h2>
-            <p className="text-sm text-gray-600 font-mono mt-1">{user.reg_no || 'N/A'}</p>
-            <p className="text-sm text-gray-500 mt-2 capitalize">{user.department || 'N/A'} - {user.role}</p>
-          </div>
-          
-          {/* Change Password Link */}
-          <div className="mt-6 pt-4 border-t border-gray-100 flex justify-center">
-            <button
-              onClick={() => setShowPasswordModal(true)}
-              className={`flex items-center space-x-2 text-sm font-medium ${WMOuBlueText} hover:underline`}
-            >
-              <Lock className="h-4 w-4" />
-              <span>Change Password</span>
-            </button>
-          </div>
+          {/* Creator Information Card (Shows who created this admin) */}
+          {/* FIX: Changed user.created_by to user.created_by_user_id */}
+          {user.created_by && (
+            <div className="bg-white p-6 rounded-2xl shadow-xl border border-gray-100">
+                <h3 className={`text-lg font-bold mb-4 pb-2 border-b ${WMOuBlueText} flex items-center`}>
+                    <UserPlus className="w-5 h-5 mr-2" /> Account Creator
+                </h3>
+                {isCreatorLoading ? (
+                    <LoadingSpinner />
+                ) : (
+                    <div className="space-y-3 text-sm text-gray-700">
+                        <p><strong>Name:</strong> {creator?.full_name || 'Unknown'}</p>
+                        <p><strong>Title:</strong> {creator?.title || 'System'}</p>
+                        {/* FIX: Changed user.created_by to user.created_by_user_id */}
+                        <p className="break-all"><strong>ID:</strong> {user.created_by}</p>
+                        {creator?.created_at && (
+                           <p><strong>Created On:</strong> {new Date(creator.created_at).toLocaleDateString()}</p>
+                        )}
+                    </div>
+                )}
+            </div>
+          )}
+
         </div>
 
         {/* Profile Details Card (Column 2/3) */}
@@ -241,21 +278,15 @@ const ProfilePage = () =>{
                   </div>
                    <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Registration Number
+                      Admin Number
                     </label>
                     <input type="text" value={user.reg_no || ''} disabled className={disabledInputStyle} />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Department
+                      Role / Title
                     </label>
-                    <input type="text" value={user.department || ''} disabled className={disabledInputStyle} />
-                  </div>
-                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Role
-                    </label>
-                    <input type="text" value={user.role || ''} disabled className={disabledInputStyle} />
+                    <input type="text" value={user.title || user.role || ''} disabled className={disabledInputStyle} />
                   </div>
             </div>
             
@@ -305,7 +336,7 @@ const ProfilePage = () =>{
                 disabled={!editMode}
                 className={getInputClass(true)}
                 rows="3"
-                placeholder="Enter your current residential address"
+                placeholder="Enter your current office address"
               />
             </div>
 
@@ -322,8 +353,8 @@ const ProfilePage = () =>{
                   Cancel
                 </button>
                 <button
-                  type="submit" // Use submit to handle form behavior naturally, though click handler is fine
-                  onClick={(e) => { e.preventDefault(); handleProfileUpdate(); }}
+                  type="button"
+                  onClick={handleProfileUpdate}
                   disabled={updateMutation.isLoading}
                   className={`${baseButtonStyle} ${WMOuBlueBg} text-white ${WMOuBlueHover} flex-1 flex items-center justify-center`}
                 >
@@ -392,7 +423,7 @@ const ProfilePage = () =>{
             <button
               type="button"
               onClick={handlePasswordChange}
-              disabled={changePasswordMutation.isLoading || passwordData.new_password !== passwordData.confirm_password || !passwordData.new_password}
+              disabled={changePasswordMutation.isLoading || passwordData.new_password !== passwordData.confirm_password || !passwordData.new_password || !passwordData.old_password}
               className={`${baseButtonStyle} ${WMOuBlueBg} text-white ${WMOuBlueHover}`}
             >
               {changePasswordMutation.isLoading ? 'Changing...' : 'Change Password'}
@@ -400,7 +431,7 @@ const ProfilePage = () =>{
           </div>
         </div>
       </Modal>
-    </StudentLayout>
+    </AdminLayout>
   );
 }
-export default ProfilePage;
+export default AdminProfilePage;

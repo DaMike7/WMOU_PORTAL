@@ -15,8 +15,9 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-white sticky top-0 z-30 shadow-sm rounded-xl px-4 py-3 border border-gray-100 mb-6">
-      <div className="flex justify-between items-center h-full">
+    // CHANGE 1: Removed rounded-xl and mb-6 for a cleaner, flush top bar look
+    <nav className="bg-white sticky top-0 z-30 shadow-md px-4 py-3 border-b border-gray-100 mb-6 -mx-4 sm:-mx-8">
+      <div className="flex justify-between items-center h-full max-w-full mx-auto sm:px-4">
         
         {/* Left Section: Logo/Title (Hidden on desktop in admin/student layout, but included for general use) */}
         <div className="flex items-center lg:hidden">
