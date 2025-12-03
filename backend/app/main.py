@@ -19,6 +19,8 @@ from collections import Counter
 from app.utils.email_service import EmailService
 import httpx
 import requests
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.pool import NullPool
 
 
 load_dotenv()
@@ -26,6 +28,22 @@ email_service = EmailService()
 
 # ============= CONFIGURATION =============
 app = FastAPI(title="School Portal API")
+
+DATABASE_URL = os.getenv("DATABASE_URL") 
+
+ASYNC_DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+
+engine = create_async_engine(
+    ASYNC_DATABASE_URL,
+    poolclass=NullPool,
+    
+    connect_args={
+        "prepared_statement_cache_size": 0,
+        "statement_cache_size": 0, 
+    },
+    
+    echo=False, 
+)
 
 # CORS
 app.add_middleware(

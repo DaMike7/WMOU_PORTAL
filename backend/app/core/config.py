@@ -4,6 +4,7 @@ class Settings(BaseSettings):
     # Supabase
     supabase_url: str
     supabase_key: str
+    database_url: str
 
     #cloudfare
     cloudflare_site_key: str
