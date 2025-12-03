@@ -1,5 +1,5 @@
 # main.py
-from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, BackgroundTasks
+from fastapi import FastAPI, Depends, HTTPException, status, UploadFile, File, BackgroundTasks,Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
@@ -18,7 +18,8 @@ from pydantic import BaseModel, EmailStr, Field
 from collections import Counter
 from app.utils.email_service import EmailService
 import httpx
-import { Turnstile } from "react-turnstile";
+import requests
+
 
 load_dotenv()
 email_service = EmailService()
@@ -38,8 +39,6 @@ app.add_middleware(
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-
-TURNSTILE_SECRET = os.getenv("CLOUDFARE_SECRET_KEY")
 
 # Validate before creating client
 if not SUPABASE_URL or not SUPABASE_KEY:
@@ -173,21 +172,23 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(days=7)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-async def verify_turnstile(token: str):
+def verify_turnstile(token: str, remote_ip: str = None):
+    secret = os.getenv("CLOUDFLARE_SECRET_KEY")
+
     url = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+    payload = {
+        "secret": secret,
+        "response": token,
+    }
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.post(url, data={
-            "secret": TURNSTILE_SECRET,
-            "response": token
-        })
+    if remote_ip:
+        payload["remoteip"] = remote_ip
 
-    result = resp.json()
+    response = requests.post(url, data=payload)
+    result = response.json()
 
-    if not result.get("success"):
-        raise HTTPException(status_code=400, detail="Turnstile verification failed")
+    return result.get("success", False)
 
-    return True
 
 def decode_token(token: str):
     try:
@@ -226,9 +227,9 @@ def calculate_gpa(results: List[dict]) -> float:
 
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(request: LoginRequest):
-    """Login for both students and admins"""
-
-    await verify_turnstile(request.turnstile_token)
+    # Verify Turnstile 
+    if not verify_turnstile(request.turnstile_token):
+        raise HTTPException(status_code=400, detail="Turnstile verification failed")
 
     response = supabase.table("users").select("*").eq("reg_no", request.reg_no).execute()
     
@@ -240,14 +241,11 @@ async def login(request: LoginRequest):
     if not verify_password(request.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
-    # Check if student is suspended
     if user["role"] == UserRole.STUDENT and user.get("status") == StudentStatus.SUSPENDED:
         raise HTTPException(status_code=403, detail="Account suspended")
     
-    # Convert UUID to string for JWT
     token = create_access_token({"user_id": str(user["id"]), "role": user["role"]})
     
-    # Remove password from response
     user_data = {k: v for k, v in user.items() if k != "password"}
     
     return TokenResponse(access_token=token, user=user_data)
