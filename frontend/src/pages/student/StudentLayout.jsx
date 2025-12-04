@@ -15,10 +15,8 @@ import {
   X,  
 } from 'lucide-react';
 
-
-// Use your provided blue color
 const WMOuBlue = 'bg-[#1e3a5f]'
-const WMOuPortalName = 'WMOU Portal'; // Defined name
+const WMOuPortalName = 'WMOU Portal';
 
 const StudentLayout = ({ children }) => {
   const { user, logout } = useAuthStore();
@@ -42,7 +40,7 @@ const StudentLayout = ({ children }) => {
   ];
 
   const SidebarContent = (
-    <div className="p-4 pt-8 text-white space-y-8 h-full flex flex-col">
+    <div className="p-4 pt-8 text-white space-y-8 h-full flex flex-col overflow-x-hidden">
       <div className="flex items-center space-x-3 mb-8">
         <img src='/wmou.png' className='w-10 h-10' alt="WMOu Logo" />
         <h1 className="text-xl font-bold">{WMOuPortalName}</h1>
@@ -87,8 +85,9 @@ const StudentLayout = ({ children }) => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
       
+      {/* Mobile Menu Button */}
       <button
         className="fixed top-4 left-4 z-40 lg:hidden p-2 text-gray-700 bg-white rounded-full shadow-md"
         onClick={() => setIsSidebarOpen(true)}
@@ -96,13 +95,14 @@ const StudentLayout = ({ children }) => {
         <Menu className="h-6 w-6" />
       </button>
 
-      {/* Desktop Sidebar - Fixed and Sticky */}
+      {/* Desktop Sticky Sidebar */}
       <div
-        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:block`}
+        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:flex flex-col overflow-hidden`}
       >
         {SidebarContent}
       </div>
 
+      {/* Mobile Sidebar */}
       {isSidebarOpen && (
         <>
           <div
@@ -111,7 +111,7 @@ const StudentLayout = ({ children }) => {
           ></div>
 
           <div
-            className={`fixed top-0 left-0 w-64 h-full ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden`}
+            className={`fixed top-0 left-0 w-64 h-full ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden overflow-hidden`}
           >
             <button
               className="absolute top-4 right-4 text-white p-1 z-50"
@@ -124,12 +124,19 @@ const StudentLayout = ({ children }) => {
         </>
       )}
 
-      {/* Main Content - Add left margin to account for fixed sidebar */}
-      <div className="flex-1 p-4 sm:p-8 overflow-y-auto pt-16 lg:pt-0 lg:ml-64">
-        <div className="hidden lg:block">
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+        
+        <div className="hidden lg:block sticky top-0 bg-gray-50 z-20 pt-8 px-8 pb-4">
           <Navbar />
         </div>
-        {children}
+
+        <main className="flex-1 p-4 sm:p-8 pt-0 overflow-y-auto lg:ml-64">
+          <div className="block lg:hidden pt-8">
+             <Navbar />
+          </div>
+          {children}
+        </main>
       </div>
     </div>
   );

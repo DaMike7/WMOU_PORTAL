@@ -91,6 +91,10 @@ class StudentStatus(str, Enum):
     SUSPENDED = "suspended"
     GRADUATED = "graduated"
 
+class AdminStatus(str, Enum):
+    ACTIVE = "active"
+    SUSPENDED = "suspended"
+
 class Semester(str, Enum):
     FIRST = "First Semester"
     SECOND = "Second Semester"
@@ -116,6 +120,12 @@ class UserCreate(BaseModel):
     department: str
     phone: Optional[str] = None
     role: UserRole = UserRole.STUDENT
+    password: str = "1234567"
+
+class AdminUserCreateRequest(BaseModel):
+    email: EmailStr
+    full_name: str
+    phone: Optional[str] = None
     password: str = "1234567"
 
 class UserUpdate(BaseModel):
@@ -158,7 +168,7 @@ class PaymentApproval(BaseModel):
 
 # Results
 class ResultCreate(BaseModel):
-    student_id: str  # UUID as string
+    student_id: str
     course_id: int
     score: float
     grade: str
@@ -183,6 +193,27 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
+
+def get_next_admin_reg_no():
+    """Finds the highest existing ADMIN### and increments it."""
+    response = supabase.table("users")\
+        .select("reg_no")\
+        .ilike("reg_no", "ADMIN%")\
+        .order("reg_no", desc=True)\
+        .limit(1)\
+        .execute()
+    
+    if not response.data:
+        return "ADMIN001"
+    
+    latest_reg_no = response.data[0]["reg_no"]
+    
+    try:
+        current_number = int(latest_reg_no[5:])
+        next_number = current_number + 1
+        return f"ADMIN{next_number:03d}"
+    except (ValueError, IndexError):
+        return "ADMIN001"
 
 def create_access_token(data: dict, expires_delta: timedelta = timedelta(days=7)):
     to_encode = data.copy()
@@ -280,8 +311,61 @@ async def change_password(data: PasswordChange, current_user: dict = Depends(get
     return {"message": "Password changed successfully"}
 
 # ============= USER MANAGEMENT (ADMIN) =============
+# ADMIN USER - NEW ENDPOINT
+@app.post("/api/admin/adminusers/create")
+async def create_admin_user(
+    user_request: AdminUserCreateRequest, 
+    background_tasks: BackgroundTasks,
+    admin: dict = Depends(get_admin_user)
+):
+    # 1. Generate new unique registration number
+    new_reg_no = get_next_admin_reg_no()
+    
+    # 2. Check if this newly generated reg_no somehow already exists (safety check)
+    existing = supabase.table("users").select("id").eq("reg_no", new_reg_no).execute()
+    if existing.data:
+        # This should ideally not happen if sequence logic is correct
+        raise HTTPException(status_code=400, detail="Generated Registration number already exists, please retry.") 
 
-# Updated UserCreate to allow optional creator tracking internally
+    raw_password = user_request.password
+    hashed_pwd = hash_password(user_request.password)
+    
+    user_data = {
+        "reg_no": new_reg_no,
+        "email": user_request.email,
+        "full_name": user_request.full_name,
+        "department": "Administration", 
+        "phone": user_request.phone,
+        "role": UserRole.ADMIN,
+        "password": hashed_pwd,
+        "status": AdminStatus.ACTIVE,
+        "created_by": admin["id"],
+        "created_at": datetime.utcnow().isoformat()
+    }
+    
+    response = supabase.table("users").insert(user_data).execute()
+    new_user = response.data[0]
+
+    email_body = f"""
+    <p>Welcome to WMOU Portal, <strong>{user_request.full_name}</strong>!</p>
+    <p>Your account has been successfully created.</p>
+    <div style="background-color: #e2e8f0; padding: 15px; border-radius: 5px; margin: 20px 0;">
+        <p style="margin: 5px 0;"><strong>Registration Number:</strong> {new_reg_no}</p>
+        <p style="margin: 5px 0;"><strong>Password:</strong> {raw_password}</p>
+    </div>
+    <p>Please login and change your password immediately.</p>
+    """
+    background_tasks.add_task(
+        email_service.send_user_welcome, 
+        student_email=user_request.email,
+        full_name=user_request.full_name,
+        reg_no=new_reg_no,
+        password=raw_password 
+    )
+
+    return {"message": "Admin user created successfully", "user": new_user}
+
+# STUDENT
 @app.post("/api/admin/users/create")
 async def create_user(
     user: UserCreate, 
@@ -340,25 +424,48 @@ async def get_all_users(
     page: int = 1,
     limit: int = 50
 ):
-    """Get users with registration counts and creator info (Task 3, 4, 8)"""
     offset = (page - 1) * limit
     
-    # Task 3 & 8: Select course registrations count and creator info
-    # Note: This assumes you have a foreign key 'created_by' in users table pointing to users.id
-    query = supabase.table("users")\
+    # Query is correct: creator:users!created_by uses the foreign key 'created_by' 
+    # on the current table to find the creator's full_name.
+    query = (
+        supabase.table("users")
         .select("*, course_registrations(count), creator:users!created_by(full_name)", count="exact")
+    )
         
     if role:
         query = query.eq("role", role)
     
-    response = query.range(offset, offset + limit - 1).order("created_at", desc=True).execute()
+    response = (
+        query.range(offset, offset + limit - 1)
+        .order("created_at", desc=True)
+        .execute()
+    )
     
     users = []
     for user in response.data:
-        user_clean = {k: v for k, v in user.items() if k != "password"}
-        # Format the count and creator for frontend
-        user_clean['registered_courses_count'] = user.get('course_registrations', [{}])[0].get('count', 0)
-        user_clean['created_by_name'] = user.get('creator', {}).get('full_name', 'System') if user.get('creator') else 'System'
+        # 1. Clean up user data
+        # Remove original created_by UUID and password
+        user_clean = {k: v for k, v in user.items() if k not in ["password", "created_by"]} 
+        
+        # 2. Handle "course_registrations" safely
+        reg = user.get("course_registrations")
+        count = reg[0].get("count", 0) if isinstance(reg, list) and reg and isinstance(reg[0], dict) else 0
+        user_clean["registered_courses_count"] = count
+        
+        # 3. Handle "creator" safely (Extracting the full_name of the creator)
+        creator = user.get("creator")
+        creator_name = "System" 
+        
+        if creator:
+            # PostgREST/Supabase sometimes returns a list [ {} ] or a single object {}
+            if isinstance(creator, dict):
+                creator_name = creator.get("full_name", "System")
+            elif isinstance(creator, list) and creator and isinstance(creator[0], dict):
+                creator_name = creator[0].get("full_name", "System")
+                
+        user_clean["created_by_name"] = creator_name
+
         users.append(user_clean)
 
     return {
@@ -396,13 +503,14 @@ async def get_courses(
     limit: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get courses filtered by dept, with student count (Task 1 & 2)"""
+    """Get courses filtered by dept, with student count"""
     offset = (page - 1) * limit
+
+    # Base query for data
     query = supabase.table("courses").select("*, course_registrations(count)")
-    
-    # Filter logic
+
+    # Apply filters
     if current_user["role"] == UserRole.STUDENT:
-        # Student access is restricted to their department
         query = query.eq("department", current_user["department"])
     elif department:
         query = query.eq("department", department)
@@ -412,8 +520,26 @@ async def get_courses(
     if semester:
         query = query.eq("semester", semester)
     
-    response = query.range(offset, offset + limit - 1).execute(count='exact')
+    # Fetch paginated data
+    response = query.range(offset, offset + limit - 1).execute()
+
+    # Separate query object for count
+    count_query = supabase.table("courses")
+    if current_user["role"] == UserRole.STUDENT:
+        count_query = count_query.eq("department", current_user["department"])
+    elif department:
+        count_query = count_query.eq("department", department)
     
+    if session:
+        count_query = count_query.eq("session", session)
+    if semester:
+        count_query = count_query.eq("semester", semester)
+
+    # Fetch total count
+    count_response = count_query.select("id", count="exact").execute()
+    total_count = count_response.count or 0
+
+    # Process courses
     courses = []
     for course in response.data:
         course['enrolled_students'] = course.get('course_registrations', [{}])[0].get('count', 0)
@@ -421,11 +547,12 @@ async def get_courses(
 
     return {
         "data": courses,
-        "total": response.count,
+        "total": total_count,
         "page": page,
         "limit": limit,
-        "total_pages": (response.count + limit - 1) // limit
+        "total_pages": (total_count + limit - 1) // limit
     }
+
 
 @app.patch("/api/admin/courses/{course_id}")
 async def update_course(course_id: int, course: CourseUpdate, admin: dict = Depends(get_admin_user)):

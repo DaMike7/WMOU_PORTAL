@@ -18,7 +18,9 @@ const AdminUsersPage = () => {
   const [formData, setFormData] = useState({
     email: '',
     full_name: '',
-    // password is auto-generated/defaulted by backend, but we'll include a placeholder for it
+    // Non-default/Optional field:
+    phone: '', 
+    // Password required by backend model, but kept hidden in state:
     password: '1234567', 
   });
 
@@ -33,15 +35,16 @@ const AdminUsersPage = () => {
 
   // Mutation to create a new user with role 'admin'
   const createMutation = useMutation({
-    mutationFn: userService.createUser,
+    // IMPORTANT: ASSUMING this function hits the new /api/admin/adminusers/create endpoint
+    mutationFn: userService.createAdminUser, 
     onSuccess: () => {
-      // Feature 7 implemented by backend: email sent to newly created admin
       toast.success('New Admin user created successfully. Credentials emailed.');
       setShowModal(false);
       queryClient.invalidateQueries(['adminUsers']);
       setFormData({
         email: '',
         full_name: '',
+        phone: '', // Reset phone
         password: '1234567',
       });
     },
@@ -50,19 +53,11 @@ const AdminUsersPage = () => {
     },
   });
   
-  // Note: Status updates are typically not used for admin users, 
-  // but if the backend supports it, the mutation below is available in userService
-  /*
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ userId, status }) => userService.updateUserStatus(userId, status),
-    // ...
-  });
-  */
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // The role must be explicitly set to 'admin'
-    createMutation.mutate({ ...formData, role: 'admin' });
+    // The role is now set by the backend, so we pass the full formData object.
+    createMutation.mutate(formData);
   };
 
   const filteredAdmins = adminsData?.data?.filter(
@@ -91,7 +86,13 @@ const AdminUsersPage = () => {
         <h1 className="text-3xl font-extrabold text-gray-900">Admin User Records</h1>
         <button 
           onClick={() => {
-            setFormData({email: '',full_name: '', password: '1234567'});
+            // Reset form data completely
+            setFormData({
+              email: '',
+              full_name: '', 
+              phone: '', // Reset phone
+              password: '1234567'
+            });
             setShowModal(true);
           }} 
           className={`flex items-center px-4 py-2 text-white rounded-xl font-semibold transition-colors shadow-md hover:shadow-lg`}
@@ -108,6 +109,7 @@ const AdminUsersPage = () => {
 
       <div className="bg-white p-4 sm:p-6 rounded-2xl shadow-lg">
 
+        {/* ... existing search and table display ... */}
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
             <div className="flex space-x-4 border-b border-gray-100 pb-2 w-full sm:w-auto">
                 <span className={`py-2 px-4 font-semibold ${WMOuBlueText} border-b-2 border-[#1e3a5f]`}>
@@ -147,7 +149,6 @@ const AdminUsersPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">
                   Status
                 </th>
-                {/* Actions column removed as status update isn't generally applicable to admins */}
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
@@ -234,6 +235,21 @@ const AdminUsersPage = () => {
                 required
               />
             </div>
+
+            {/* --- ADDED: Phone Number (Non-default, Optional field) --- */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Phone Number (Optional)
+              </label>
+              <input
+                type="text"
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                className={inputStyle}
+                placeholder="e.g., +2348012345678"
+              />
+            </div>
+            {/* --- END ADDED --- */}
             
           </div>
 

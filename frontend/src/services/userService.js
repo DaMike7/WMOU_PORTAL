@@ -6,6 +6,11 @@ export const userService = {
     return response.data;
   },
 
+  createAdminUser: async (data) => {
+    const response = await api.post('/api/admin/adminusers/create', data);
+    return response.data;
+  },
+
   getAllUsers: async (role, page = 1, limit = 50) => {
     const params = { page, limit };
     if (role) params.role = role;

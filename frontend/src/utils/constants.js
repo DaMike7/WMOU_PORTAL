@@ -30,9 +30,18 @@ export const SESSIONS = [
 export const DEPARTMENTS = [
   'Cyber Security',
   'Computer Science',
-  'Software Engineering',
-  'Information Technology',
-  'Data Science',
+  'Accounting',
+  'Educational Management',
+  'Business Management',
+  'Economics',
+  'Finance',
+  'Human Resource Management',
+  'Information Systems',
+  'Marketing',
+  'Mass Communication',
+  'Office And Information Management',
+  'Public Administration',
+  'Sociology'
 ];
 
 export const ADMIN_WHATSAPP_NUMBER = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER
