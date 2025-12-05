@@ -41,7 +41,7 @@ const AdminLayout = ({ children }) => {
     { path: '/admin/courses', icon: BookOpen, label: 'Courses' },
     { path: '/admin/payments', icon: CreditCard, label: 'Payments' },
     { path: '/admin/materials', icon: FileText, label: 'Materials' },
-    { path: '/admin/students/results', icon: BookOpenText, label: 'Students Results' },
+    { path: '/admin/results', icon: BookOpenText, label: 'Student Results' },
     { path: '/admin/announcements', icon: Megaphone, label: 'Announcements' },
     { path: '/admin/profile', icon: UserStar, label: 'Profile' },
   ];
@@ -56,7 +56,13 @@ const AdminLayout = ({ children }) => {
       <nav className="space-y-2 flex-grow">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname.startsWith(item.path);
+          
+          // --- CORRECTED ACTIVE CHECK LOGIC ---
+          const isActive = 
+            location.pathname === item.path || 
+            (location.pathname.startsWith(item.path) && location.pathname.charAt(item.path.length) === '/');
+          // ------------------------------------
+
           return (
             <Link
               key={item.path}
@@ -92,7 +98,7 @@ const AdminLayout = ({ children }) => {
   );
 
   return (
-    /* FIX: overflow-x-hidden added */
+    // Top-level container ensures the whole app doesn't overflow horizontally
     <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
 
       <button
@@ -102,22 +108,26 @@ const AdminLayout = ({ children }) => {
         <Menu className="h-6 w-6" />
       </button>
 
+      {/* FIXED DESKTOP SIDEBAR */}
       <div
-        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:block z-30`}
+        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:block z-30 overflow-y-auto`} 
       >
         {SidebarContent}
       </div>
       
+      {/* Spacer div to keep content from sliding under the sidebar */}
       <div className="hidden lg:block w-64 flex-shrink-0"></div>
 
       {isSidebarOpen && (
         <>
+          {/* Overlay */}
           <div
             className="fixed inset-0 bg-opacity-50 z-40 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           ></div>
+          {/* MOBILE SIDEBAR */}
           <div
-            className={`fixed top-0 left-0 w-64 h-full ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden`}
+            className={`fixed top-0 left-0 w-64 h-screen ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden overflow-y-auto`}
           >
             <button
               className="absolute top-4 right-4 text-white p-1 z-50"
@@ -130,12 +140,15 @@ const AdminLayout = ({ children }) => {
         </>
       )}
 
+      {/* MAIN CONTENT WRAPPER */}
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
 
+        {/* Header - Should be sticky, not fixed */}
         <header className="hidden lg:block sticky top-0 z-20 bg-gray-50 pt-8 px-8 pb-4">
           <Navbar />
         </header>
 
+        {/* Main Content Area - Allows vertical scrolling of content */}
         <main className="flex-1 p-4 sm:p-8 pt-0 overflow-y-auto overflow-x-hidden">
           <div className="block lg:hidden pt-8">
             <Navbar />

@@ -8,6 +8,7 @@ export const courseService = {
     if (department) params.department = department;
     
     const response = await api.get('/api/courses', { params });
+    console.log(response.data)
     return response.data;
   },
 

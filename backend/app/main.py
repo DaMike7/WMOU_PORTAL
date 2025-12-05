@@ -498,61 +498,86 @@ async def create_course(course: CourseCreate, admin: dict = Depends(get_admin_us
 async def get_courses(
     session: Optional[str] = None,
     semester: Optional[str] = None,
-    department: Optional[str] = None, 
+    department: Optional[str] = None,
     page: int = 1,
     limit: int = 20,
     current_user: dict = Depends(get_current_user)
 ):
-    """Get courses filtered by dept, with student count"""
     offset = (page - 1) * limit
 
-    # Base query for data
-    query = supabase.table("courses").select("*, course_registrations(count)")
+    # --------------------------------------------------------------------
+    # STEP 1: COUNT QUERY (SAFE)
+    # --------------------------------------------------------------------
+    count_query = supabase.table("courses").select("id", count="exact")
 
-    # Apply filters
-    if current_user["role"] == UserRole.STUDENT:
-        query = query.eq("department", current_user["department"])
-    elif department:
-        query = query.eq("department", department)
-    
-    if session:
-        query = query.eq("session", session)
-    if semester:
-        query = query.eq("semester", semester)
-    
-    # Fetch paginated data
-    response = query.range(offset, offset + limit - 1).execute()
-
-    # Separate query object for count
-    count_query = supabase.table("courses")
     if current_user["role"] == UserRole.STUDENT:
         count_query = count_query.eq("department", current_user["department"])
     elif department:
         count_query = count_query.eq("department", department)
-    
+
     if session:
         count_query = count_query.eq("session", session)
+
     if semester:
         count_query = count_query.eq("semester", semester)
 
-    # Fetch total count
-    count_response = count_query.select("id", count="exact").execute()
-    total_count = count_response.count or 0
+    count_res = count_query.execute()
+    total_count = count_res.count or 0
+    total_pages = (total_count + limit - 1) // limit
 
-    # Process courses
+    # If page is out of range, return empty data
+    if total_count == 0 or page > total_pages:
+        return {
+            "data": [],
+            "total": total_count,
+            "page": page,
+            "limit": limit,
+            "total_pages": total_pages
+        }
+
+    # --------------------------------------------------------------------
+    # STEP 2: MAIN QUERY WITH STUDENT COUNT
+    # --------------------------------------------------------------------
+    query = (
+        supabase
+        .table("courses")
+        .select("*, course_registrations(count)")
+    )
+
+    if current_user["role"] == UserRole.STUDENT:
+        query = query.eq("department", current_user["department"])
+    elif department:
+        query = query.eq("department", department)
+
+    if session:
+        query = query.eq("session", session)
+
+    if semester:
+        query = query.eq("semester", semester)
+
+    response = query.range(offset, offset + limit - 1).execute()
+
+    # --------------------------------------------------------------------
+    # STEP 3: TRANSFORM TO MATCH FRONTEND
+    # --------------------------------------------------------------------
     courses = []
-    for course in response.data:
-        course['enrolled_students'] = course.get('course_registrations', [{}])[0].get('count', 0)
-        courses.append(course)
+    for c in response.data:
+        students_count = 0
+        if isinstance(c.get("course_registrations"), list) and len(c["course_registrations"]) > 0:
+            students_count = c["course_registrations"][0].get("count", 0)
+
+        courses.append({
+            **c,
+            "students_count": students_count
+        })
 
     return {
         "data": courses,
         "total": total_count,
         "page": page,
         "limit": limit,
-        "total_pages": (total_count + limit - 1) // limit
+        "total_pages": total_pages
     }
-
 
 @app.patch("/api/admin/courses/{course_id}")
 async def update_course(course_id: int, course: CourseUpdate, admin: dict = Depends(get_admin_user)):

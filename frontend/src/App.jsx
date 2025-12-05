@@ -114,7 +114,7 @@ function App() {
             }
           />
           <Route
-            path="/admin/students/results"
+            path="/admin/results"
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <ResultsPage />

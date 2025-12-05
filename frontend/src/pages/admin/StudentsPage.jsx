@@ -198,9 +198,10 @@ const StudentsPage = () => {
                       className="text-sm border border-gray-200 rounded-xl px-3 py-1.5 focus:ring-2 focus:ring-[#1e3a5f] focus:border-transparent bg-white shadow-sm hover:border-gray-300 transition"
                       disabled={updateStatusMutation.isLoading}
                     >
-                      <option value="ACTIVE">Active</option>
-                      <option value="SUSPENDED">Suspended</option>
-                      <option value="GRADUATED">Graduated</option>
+                      {/* FIX: Change option values to lowercase to match the Python Enum string values */}
+                      <option value="active">Active</option>
+                      <option value="suspended">Suspended</option>
+                      <option value="graduated">Graduated</option>
                     </select>
                   </td>
                 </tr>

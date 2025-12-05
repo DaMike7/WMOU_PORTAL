@@ -40,16 +40,22 @@ const StudentLayout = ({ children }) => {
   ];
 
   const SidebarContent = (
-    <div className="p-4 pt-8 text-white space-y-8 h-full flex flex-col overflow-x-hidden">
+    // FIX: Removed overflow-x-hidden from here, let the parent handle it
+    <div className="p-4 pt-8 text-white space-y-8 h-full flex flex-col">
       <div className="flex items-center space-x-3 mb-8">
         <img src='/wmou.png' className='w-10 h-10' alt="WMOu Logo" />
         <h1 className="text-xl font-bold">{WMOuPortalName}</h1>
       </div>
 
+      {/* FIX: Set navigation area to scroll vertically if content is too long */}
       <nav className="space-y-2 flex-grow overflow-y-auto">
         {menuItems.map((item) => {
           const Icon = item.icon;
-          const isActive = location.pathname.startsWith(item.path);
+          // Improved active check logic to prevent 'results' matching 'courses' if routes were /courses/123/results
+          const isActive = 
+            location.pathname === item.path || 
+            (location.pathname.startsWith(item.path) && location.pathname.charAt(item.path.length) === '/');
+
           return (
             <Link
               key={item.path}
@@ -85,6 +91,7 @@ const StudentLayout = ({ children }) => {
   );
 
   return (
+    // Top-level container ensures the whole app doesn't overflow horizontally
     <div className="min-h-screen bg-gray-50 flex overflow-x-hidden">
       
       {/* Mobile Menu Button */}
@@ -95,23 +102,27 @@ const StudentLayout = ({ children }) => {
         <Menu className="h-6 w-6" />
       </button>
 
-      {/* Desktop Sticky Sidebar */}
+      {/* Desktop FIXED Sidebar */}
       <div
-        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:flex flex-col overflow-hidden`}
+        className={`w-64 h-screen ${WMOuBlue} shadow-xl fixed top-0 left-0 hidden lg:block z-30 overflow-y-auto`}
       >
         {SidebarContent}
       </div>
+      
+      {/* Spacer div to keep content from sliding under the sidebar */}
+      <div className="hidden lg:block w-64 flex-shrink-0"></div>
 
       {/* Mobile Sidebar */}
       {isSidebarOpen && (
         <>
           <div
-            className="fixed inset-0 bg-opacity-30 z-40 lg:hidden"
+            className="fixed inset-0 bg-gray-900 bg-opacity-30 z-40 lg:hidden"
             onClick={() => setIsSidebarOpen(false)}
           ></div>
 
+          {/* MOBILE Sidebar - Ensure full height and internal scrolling */}
           <div
-            className={`fixed top-0 left-0 w-64 h-full ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden overflow-hidden`}
+            className={`fixed top-0 left-0 w-64 h-screen ${WMOuBlue} z-50 transform transition-transform duration-300 ease-in-out lg:hidden overflow-y-auto`}
           >
             <button
               className="absolute top-4 right-4 text-white p-1 z-50"
@@ -127,11 +138,12 @@ const StudentLayout = ({ children }) => {
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
         
-        <div className="hidden lg:block sticky top-0 bg-gray-50 z-20 pt-8 px-8 pb-4">
+        <header className="hidden lg:block sticky top-0 bg-gray-50 z-20 pt-8 px-8 pb-4">
           <Navbar />
-        </div>
+        </header>
 
-        <main className="flex-1 p-4 sm:p-8 pt-0 overflow-y-auto lg:ml-64">
+        {/* Main Content Area - Allows vertical scrolling of content */}
+        <main className="flex-1 p-4 sm:p-8 pt-0 overflow-y-auto overflow-x-hidden">
           <div className="block lg:hidden pt-8">
              <Navbar />
           </div>

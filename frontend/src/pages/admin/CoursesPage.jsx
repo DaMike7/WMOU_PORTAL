@@ -182,10 +182,14 @@ const CoursesPage = () => {
     const queryClient = useQueryClient();
 
     const { data: coursesData, isLoading, isPreviousData } = useQuery({
-        // Include selectedDepartment in queryKey to refetch when filter changes
         queryKey: ['adminCourses', currentPage, selectedDepartment],
-        // Pass the department filter to the service call
-        queryFn: () => courseService.getCourses(selectedDepartment, null, currentPage, 20),
+        queryFn: () => courseService.getCourses(
+            null,
+            null,
+            selectedDepartment,
+            currentPage,
+            20 
+        ),
         keepPreviousData: true,
     });
 
