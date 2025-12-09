@@ -312,7 +312,7 @@ const CoursesPage = () => {
                 </button>
             </div>
             
-            <p className="text-gray-500 mb-6 -mt-4 hidden lg:block">
+            <p className="text-gray-500 mb-6 -mt-4 lg:block">
                 Manage your courses, departments, and fees. Total: {coursesData?.total || 0} courses
             </p>
 
@@ -344,7 +344,7 @@ const CoursesPage = () => {
                 </div>
 
                 {/* Table Section */}
-                <div className="overflow-x-auto">
+                <div className="w-full overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-100">
                         <thead className="bg-blue-50/50">
                             <tr>
@@ -354,10 +354,10 @@ const CoursesPage = () => {
                                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                                     Code
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider sm:table-cell">
                                     Department
                                 </th>
-                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider md:table-cell">
                                     Session/Semester
                                 </th>
                                 {/* --- NEW COLUMN: Student Count (Feature 2) --- */}
@@ -381,10 +381,10 @@ const CoursesPage = () => {
                                     <td className="px-6 py-4 whitespace-nowrap font-mono font-bold text-sm text-blue-600">
                                         {course.course_code}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 sm:table-cell">
                                         {course.department}
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 md:table-cell">
                                         {course.session} ({course.semester.split(' ')[0]})
                                     </td>
                                     {/* --- NEW DATA CELL: Student Count (Feature 2) --- */}

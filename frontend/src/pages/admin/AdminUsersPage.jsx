@@ -20,7 +20,7 @@ const AdminUsersPage = () => {
     full_name: '',
     // Non-default/Optional field:
     phone: '', 
-    // Password required by backend model, but kept hidden in state:
+    // Password required by backend model, but kept in state:
     password: '1234567', 
   });
 
@@ -103,7 +103,7 @@ const AdminUsersPage = () => {
         </button>
       </div>
       
-      <p className="text-gray-500 mb-6 -mt-4 hidden lg:block">
+      <p className="text-gray-500 mb-6 -mt-4 lg:block">
         Manage all administrative staff accounts. Total: {adminsData?.total || 0} records
       </p>
 
@@ -129,21 +129,21 @@ const AdminUsersPage = () => {
             </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="w-full overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-100">
             <thead className="bg-blue-50/50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider sm:table-cell">
                   Role
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider md:table-cell">
                   Email
                 </th>
                 {/* --- NEW COLUMN: Created By (Feature 8) --- */}
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider lg:table-cell">
                   Created By
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tr-lg">
@@ -155,17 +155,17 @@ const AdminUsersPage = () => {
               {filteredAdmins?.map((admin) => (
                 <tr key={admin.id} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center">
-                    <Crown className="w-4 h-4 mr-2 text-yellow-500 hidden lg:inline" />
+                    <Crown className="w-4 h-4 mr-2 text-yellow-500 lg:inline" />
                     {admin.full_name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm hidden sm:table-cell text-red-600 font-bold">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm sm:table-cell text-red-600 font-bold">
                     {admin.role.toUpperCase()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 md:table-cell">
                     {admin.email}
                   </td>
                   {/* --- NEW DATA CELL: Created By (Feature 8) --- */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 lg:table-cell">
                     {admin.created_by_name || 'System'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">

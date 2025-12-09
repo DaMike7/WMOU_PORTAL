@@ -169,14 +169,14 @@ export default function PaymentUpload({ course, onSuccess }) {
         >
           Cancel
         </button>
-        <button
+       <button
           onClick={handleUpload}
           disabled={uploadMutation.isLoading || !file}
           className="flex-1 px-4 py-3 bg-[#1e3a5f] text-white rounded-lg font-medium hover:bg-[#2d5a8f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
         >
           {uploadMutation.isLoading ? (
             <>
-              <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+              <div className="h-4 w-4 rounded-full border-2 border-white/80 border-t-transparent animate-spin mr-2" />
               Uploading...
             </>
           ) : (

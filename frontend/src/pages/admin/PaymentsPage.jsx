@@ -107,7 +107,7 @@ const PaymentsPage = () => {
         <h1 className="text-3xl font-extrabold text-gray-900 ml-10 lg:ml-0">Payment Approvals</h1>
       </div>
       
-      <p className="text-gray-500 mb-6 -mt-4 ml-10 lg:ml-0 hidden lg:block">
+      <p className="text-gray-500 mb-6 -mt-4 ml-10 lg:ml-0 lg:block">
         Review and approve student payment receipts. Total: {paymentsData?.total || 0} payments
       </p>
 
@@ -145,13 +145,13 @@ const PaymentsPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Student/Reg No
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider sm:table-cell">
                   Course
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Amount
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider md:table-cell">
                   Date
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
@@ -163,7 +163,7 @@ const PaymentsPage = () => {
                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
                   Actions
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider lg:table-cell">
                   Reviewer
                 </th>
               </tr>
@@ -175,14 +175,14 @@ const PaymentsPage = () => {
                     <p className="font-medium text-gray-900">{payment.users?.full_name}</p>
                     <p className="font-mono text-xs text-gray-500">{payment.users?.reg_no}</p>
                   </td>
-                  <td className="px-6 py-4 hidden sm:table-cell">
+                  <td className="px-6 py-4 sm:table-cell">
                     <p className="font-semibold text-sm">{payment.courses?.course_code}</p>
                     <p className="text-xs text-gray-500">{payment.courses?.title}</p>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap font-bold text-green-600">
                     {formatCurrency(payment.amount_paid)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-xs hidden md:table-cell">
+                  <td className="px-6 py-4 whitespace-nowrap text-gray-500 text-xs md:table-cell">
                     {formatDateTime(payment.created_at)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -231,7 +231,7 @@ const PaymentsPage = () => {
                     )}
                   </td>
                   {/* Reviewer Column (Feature 5) */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 hidden lg:table-cell">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 lg:table-cell">
                     {payment.reviewed_by_name || 'N/A'}
                   </td>
                 </tr>
@@ -280,7 +280,7 @@ const PaymentsPage = () => {
       >
         {selectedPayment && (
           <div className="space-y-4">
-            <div className="w-full h-96 overflow-hidden rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
+            <div className="w-full h-96 overflow rounded-lg border border-gray-200 bg-gray-50 flex items-center justify-center">
                 <img
                     src={selectedPayment.receipt_url}
                     alt="Payment Receipt"

@@ -110,7 +110,7 @@ const StudentsPage = () => {
         </button>
       </div>
       
-      <p className="text-gray-500 mb-6 -mt-4 hidden lg:block">
+      <p className="text-gray-500 mb-6 -mt-4 lg:block">
         Manage all student accounts and update their status. Total: {studentsData?.total || 0} records
       </p>
 
@@ -142,10 +142,10 @@ const StudentsPage = () => {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider rounded-tl-lg">
                   Name
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden sm:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider sm:table-cell">
                   Reg No
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden md:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider md:table-cell">
                   Department
                 </th>
                 {/* --- NEW COLUMN 1: Course Count (Feature 3) --- */}
@@ -153,7 +153,7 @@ const StudentsPage = () => {
                   Courses
                 </th>
                 {/* --- NEW COLUMN 2: Created By (Feature 8) --- */}
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider hidden lg:table-cell">
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider lg:table-cell">
                   Created By
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
@@ -168,13 +168,13 @@ const StudentsPage = () => {
               {filteredStudents?.map((student) => (
                 <tr key={student.id} className="hover:bg-blue-50/30 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap font-medium text-gray-900 flex items-center">
-                    <Users className="w-4 h-4 mr-2 text-gray-400 hidden lg:inline" />
+                    <Users className="w-4 h-4 mr-2 text-gray-400 lg:inline" />
                     {student.full_name}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm hidden sm:table-cell text-blue-600">
+                  <td className="px-6 py-4 whitespace-nowrap font-mono text-sm sm:table-cell text-blue-600">
                     {student.reg_no}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 md:table-cell">
                     {student.department}
                   </td>
                   {/* --- NEW DATA CELL 1: Course Count (Feature 3) --- */}
@@ -185,7 +185,7 @@ const StudentsPage = () => {
                     </div>
                   </td>
                   {/* --- NEW DATA CELL 2: Created By (Feature 8) --- */}
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden lg:table-cell">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 lg:table-cell">
                     {student.created_by_name || 'Admin'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
