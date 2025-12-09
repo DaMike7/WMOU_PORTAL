@@ -36,6 +36,13 @@ export const courseService = {
     return response.data;
   },
 
+  registerAllCourses: async (courseIds) => {
+  const response = await api.post('/api/student/register-all-courses', {
+    course_ids: courseIds
+  });
+  return response.data;
+},
+
   deleteCourse: async (courseId) => {
     const response = await api.delete(`/api/admin/courses/${courseId}`);
     return response.data;

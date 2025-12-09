@@ -299,10 +299,13 @@ const AdminDashboard = () =>{
             {metrics.activity.latest_announcements?.length > 0 ? (
               metrics.activity.latest_announcements.map((ann) => (
                 <li key={ann.id} className="py-3 hover:bg-blue-50/30 rounded-md px-1 transition duration-150">
-                  <p className="font-medium text-gray-900 truncate">{ann.title}</p>
-                  <p className="text-xs text-blue-600 mt-0.5">
-                    {formatDateTime(ann.created_at)}
-                  </p>
+                  <Link to='/admin/announcements'>
+                    <p className="font-semibold text-blue-600 mt-0.5">{ann.title}</p>
+                    <p className="font-medium text-gray-900 flex">{ann.content}</p>
+                    <p className="text-xs text-blue-600 mt-0.5">
+                      {formatDateTime(ann.created_at)}
+                    </p>
+                  </Link>
                 </li>
               ))
             ) : (

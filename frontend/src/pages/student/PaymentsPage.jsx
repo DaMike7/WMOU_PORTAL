@@ -4,18 +4,18 @@ import StudentLayout from './StudentLayout';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import Badge from '../../components/common/Badge';
 import EmptyState from '../../components/common/EmptyState';
-import { courseService } from '../../services/courseService';
+import { paymentService } from '../../services/paymentService';
 import { formatCurrency, formatDateTime } from '../../utils/helpers';
 import { Receipt, Eye } from 'lucide-react';
 import { useState } from 'react';
 import Modal from '../../components/common/Modal';
 
-const PaymentsPage = () =>{
+const PaymentsPage = () => {
   const [selectedReceipt, setSelectedReceipt] = useState(null);
 
-  const { data: registrations, isLoading } = useQuery({
-    queryKey: ['registeredCourses'],
-    queryFn: courseService.getRegisteredCourses,
+  const { data: paymentsData, isLoading } = useQuery({
+    queryKey: ['studentPaymentHistory'],
+    queryFn: () => paymentService.getStudentPaymentHistory(1, 20),
   });
 
   if (isLoading) {
@@ -30,7 +30,7 @@ const PaymentsPage = () =>{
     <StudentLayout>
       <h1 className="text-3xl font-bold text-gray-900 mb-8">Payment History</h1>
 
-      {registrations?.length === 0 ? (
+      {paymentsData?.data?.length === 0 ? (
         <div className="card">
           <EmptyState message="No payment records found" icon={Receipt} />
         </div>
@@ -58,35 +58,27 @@ const PaymentsPage = () =>{
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {registrations?.map((reg) => (
-                  <tr key={reg.id} className="table-row">
+                {paymentsData?.data?.map((payment) => (
+                  <tr key={payment.id} className="table-row">
                     <td className="px-6 py-4">
                       <div>
-                        <p className="font-semibold">{reg.courses?.course_code}</p>
-                        <p className="text-sm text-gray-500">{reg.courses?.title}</p>
+                        <p className="font-semibold">{payment.courses?.course_code}</p>
+                        <p className="text-sm text-gray-500">{payment.courses?.title}</p>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap font-semibold">
-                      {reg.payment_status
-                        ? formatCurrency(reg.payment_status.amount_paid)
-                        : 'N/A'}
+                      {formatCurrency(payment.amount_paid)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {reg.payment_status ? (
-                        <Badge status={reg.payment_status.status} />
-                      ) : (
-                        <span className="text-gray-500">No payment</span>
-                      )}
+                      <Badge status={payment.status} />
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {reg.payment_status
-                        ? formatDateTime(reg.payment_status.created_at)
-                        : 'N/A'}
+                      {formatDateTime(payment.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {reg.payment_status?.receipt_url && (
+                      {payment.receipt_url && (
                         <button
-                          onClick={() => setSelectedReceipt(reg.payment_status)}
+                          onClick={() => setSelectedReceipt(payment)}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           <Eye className="h-4 w-4" />
@@ -130,4 +122,5 @@ const PaymentsPage = () =>{
     </StudentLayout>
   );
 }
-export default PaymentsPage
+
+export default PaymentsPage;

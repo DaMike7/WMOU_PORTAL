@@ -14,6 +14,13 @@ export const paymentService = {
     return response.data;
   },
 
+  getStudentPaymentHistory: async (page = 1, limit = 20) => {
+    const response = await api.get('/api/student/payment-history', {
+      params: { page, limit },
+    });
+    return response.data;
+  },
+
   getAllPayments: async (status, page = 1, limit = 30) => {
     const params = { page, limit };
     if (status) params.status = status;

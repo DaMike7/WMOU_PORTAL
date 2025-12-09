@@ -4,7 +4,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta , timezone
 import jwt
 from passlib.context import CryptContext
 from supabase import create_client, Client
@@ -21,7 +21,7 @@ import httpx
 import requests
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
-
+from collections import Counter
 
 load_dotenv()
 email_service = EmailService()
@@ -57,6 +57,8 @@ app.add_middleware(
 # Supabase
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+
+TURNSTILE_ENABLED = os.getenv("TURNSTILE_ENABLED")
 
 # Validate before creating client
 if not SUPABASE_URL or not SUPABASE_KEY:
@@ -162,7 +164,6 @@ class PaymentProofUpload(BaseModel):
     receipt_url: str
 
 class PaymentApproval(BaseModel):
-    payment_id: int
     approved: bool
     rejection_reason: Optional[str] = None
 
@@ -221,23 +222,26 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(days=7)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-def verify_turnstile(token: str, remote_ip: str = None):
-    secret = os.getenv("CLOUDFLARE_SECRET_KEY")
 
-    url = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
-    payload = {
-        "secret": secret,
-        "response": token,
-    }
+if TURNSTILE_ENABLED:
+    def verify_turnstile(token: str, remote_ip: str = None):
+        secret = os.getenv("CLOUDFLARE_SECRET_KEY")
 
-    if remote_ip:
-        payload["remoteip"] = remote_ip
+        url = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+        payload = {
+            "secret": secret,
+            "response": token,
+        }
 
-    response = requests.post(url, data=payload)
-    result = response.json()
+        if remote_ip:
+            payload["remoteip"] = remote_ip
 
-    return result.get("success", False)
+        response = requests.post(url, data=payload)
+        result = response.json()
 
+        return result.get("success", False)
+else:
+    pass
 
 def decode_token(token: str):
     try:
@@ -724,65 +728,160 @@ async def get_all_payments(
         "total_pages": (response.count + limit - 1) // limit
     }
 
+@app.post("/api/student/payment/upload-proof-bulk")
+async def upload_payment_proof_bulk(
+    course_ids: List[int],
+    total_amount: float,
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """Student uploads single payment receipt for multiple courses"""
+    
+    # Validate courses exist
+    courses = supabase.table("courses")\
+        .select("id, fee, title, course_code")\
+        .in_("id", course_ids)\
+        .execute()
+    
+    if len(courses.data) != len(course_ids):
+        raise HTTPException(status_code=404, detail="One or more courses not found")
+    
+    # Calculate expected total
+    expected_total = sum(c["fee"] for c in courses.data)
+    if abs(total_amount - expected_total) > 0.01:
+        raise HTTPException(status_code=400, detail=f"Amount mismatch. Expected: {expected_total}, Received: {total_amount}")
+    
+    # Upload receipt once
+    upload_result = cloudinary.uploader.upload(file.file, folder="wmou_portal/payment_receipts")
+    
+    # Create payment records for each course
+    payment_records = []
+    for course in courses.data:
+        payment_data = {
+            "student_id": current_user["id"],
+            "course_id": course["id"],
+            "amount_paid": course["fee"],
+            "receipt_url": upload_result["secure_url"],
+            "status": PaymentStatus.PENDING,
+            "created_at": datetime.utcnow().isoformat()
+        }
+        payment_records.append(payment_data)
+    
+    response = supabase.table("course_payments").insert(payment_records).execute()
+    
+    return {
+        "message": f"Payment proof uploaded for {len(course_ids)} courses",
+        "courses": [c["course_code"] for c in courses.data],
+        "total_amount": total_amount,
+        "payments": response.data
+    }
+
+@app.get("/api/student/payment-history")
+async def get_student_payment_history(
+    current_user: dict = Depends(get_current_user),
+    page: int = 1,
+    limit: int = 20
+):
+    """Get student's payment history"""
+    offset = (page - 1) * limit
+    
+    query = supabase.table("course_payments")\
+        .select("*, courses(course_code, title), reviewer:users!course_payments_reviewed_by_fkey(full_name)", count="exact")\
+        .eq("student_id", current_user["id"])
+    
+    response = query.order("created_at", desc=True).range(offset, offset + limit - 1).execute()
+    
+    payments = []
+    for p in response.data:
+        p['reviewed_by_name'] = p.get('reviewer', {}).get('full_name', 'N/A') if p.get('reviewer') else 'N/A'
+        payments.append(p)
+
+    return {
+        "data": payments,
+        "total": response.count,
+        "page": page,
+        "limit": limit,
+        "total_pages": (response.count + limit - 1) // limit
+    }
+
 @app.patch("/api/admin/payments/{payment_id}/approve")
 async def approve_payment(
     payment_id: int,
-    approved: bool,
+    review_data: PaymentApproval,
     background_tasks: BackgroundTasks,
-    rejection_reason: Optional[str] = None,
     admin: dict = Depends(get_admin_user)
 ):
-    """Approve payment and send email (Task 6)"""
+    approved = review_data.approved
+    rejection_reason = review_data.rejection_reason
+
+    reviewed_at = datetime.now(timezone.utc).isoformat()
+
     update_data = {
         "status": PaymentStatus.APPROVED if approved else PaymentStatus.REJECTED,
-        "reviewed_at": datetime.utcnow().isoformat(),
+        "reviewed_at": reviewed_at,
         "reviewed_by": admin["id"]
     }
-    
+
     if not approved and rejection_reason:
         update_data["rejection_reason"] = rejection_reason
-    
-    # Update payment
-    payment_response = supabase.table("course_payments").update(update_data).eq("id", payment_id).select("*, users(email, full_name), courses(title)").execute()
-    payment_record = payment_response.data[0]
-    
-    # If approved, register
+
+    # STEP 1: UPDATE
+    update_response = (
+        supabase.table("course_payments")
+        .update(update_data)
+        .eq("id", payment_id)
+        .execute()
+    )
+
+    if not update_response.data:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Payment with ID {payment_id} not found."
+        )
+
+    # STEP 2: SELECT WITH EXPLICIT RELATIONSHIPS
+    payment_response = (
+        supabase.table("course_payments")
+        .select(
+            "*, "
+            "student:users!course_payments_student_id_fkey(email, full_name), "
+            "reviewer:users!course_payments_reviewed_by_fkey(email, full_name), "
+            "courses(title)"
+        )
+        .eq("id", payment_id)
+        .single()
+        .execute()
+    )
+
+    payment_record = payment_response.data
+
+    # STEP 3: REGISTER STUDENT IF PAYMENT APPROVED
     if approved:
-        # Check if already registered
-        existing = supabase.table("course_registrations")\
-            .select("id")\
-            .eq("student_id", payment_record["student_id"])\
-            .eq("course_id", payment_record["course_id"])\
+        existing = (
+            supabase.table("course_registrations")
+            .select("id")
+            .eq("student_id", payment_record["student_id"])
+            .eq("course_id", payment_record["course_id"])
             .execute()
-        
+        )
+
         if not existing.data:
             registration_data = {
                 "student_id": payment_record["student_id"],
                 "course_id": payment_record["course_id"],
-                "registered_at": datetime.utcnow().isoformat()
+                "registered_at": datetime.now(timezone.utc).isoformat()
             }
             supabase.table("course_registrations").insert(registration_data).execute()
 
-    # Task 6: Send Notification Email
-    status_text = "APPROVED" if approved else "REJECTED"
-    color = "#22c55e" if approved else "#ef4444"
-    
-    email_body = f"""
-    <p>Dear {payment_record['users']['full_name']},</p>
-    <p>Your payment for the course <strong>{payment_record['courses']['title']}</strong> has been <strong style="color: {color};">{status_text}</strong>.</p>
-    """
-    
-    if not approved and rejection_reason:
-        email_body += f"<p><strong>Reason:</strong> {rejection_reason}</p>"
-        
+    # STEP 4: EMAIL NOTIFICATION
     background_tasks.add_task(
         email_service.send_payment_approval,
-        student_email=payment_record['users']['email'],
-        course_name=payment_record['courses']['title'],
+        student_email=payment_record["student"]["email"],
+        course_name=payment_record["courses"]["title"],
         approved=approved,
         rejection_reason=rejection_reason
     )
-    
+
     return {"message": "Payment processed successfully"}
 
 # ============= COURSE MATERIALS =============
@@ -1012,100 +1111,207 @@ async def delete_announcement(announcement_id: int, admin: dict = Depends(get_ad
     return {"message": "Announcement deleted successfully"}
 
 # ============= DASHBOARD STATS (FIXED) =============
-
 @app.get("/api/admin/dashboard")
 async def get_admin_dashboard(admin: dict = Depends(get_admin_user)):
-    """Get complex admin dashboard statistics (Task 9) - FIXED"""
+    """
+    Retrieve comprehensive admin dashboard metrics, including student, course, 
+    financial, and activity summaries.
+    """
     
-    # 1. Student Metrics
-    students_query = supabase.table("users").select("id, status, department, created_at").eq("role", UserRole.STUDENT).execute()
-    students = students_query.data
+    # Setup for Time-Based Filters
+    # from datetime import timezone # Moved to top-level imports
     
-    total_active_students = len([s for s in students if s.get("status") == StudentStatus.ACTIVE])
+    # Calculate the exact UTC datetime 30 days ago
+    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
     
-    thirty_days_ago = datetime.utcnow() - timedelta(days=30)
-    new_students_count = len([
-        s for s in students 
-        if datetime.fromisoformat(s["created_at"].replace('Z', '+00:00')).replace(tzinfo=None) > thirty_days_ago
-    ])
+    # Format the datetime object into a clean ISO 8601 string (YYYY-MM-DDTHH:MM:SSZ)
+    thirty_days_ago_iso = thirty_days_ago.strftime('%Y-%m-%dT%H:%M:%SZ')
     
-    # Group by department
-    dept_counts = Counter(s["department"] for s in students if s.get("department"))
-    students_by_dept = [{"name": dept, "value": count} for dept, count in dept_counts.items()]
+    # Helper to safely parse Supabase date strings for in-memory calculations
+    def parse_dt(x: Optional[str]) -> datetime:
+        if not x: return datetime.min
+        try:
+            if 'Z' in x or '+' in x:
+                return datetime.fromisoformat(x.replace("Z", "+00:00"))
+            # Fallback for the database timestamp format observed
+            if "." in x: x = x.split(".")[0]
+            return datetime.strptime(x, "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+        except Exception:
+            return datetime.min
 
-    # 2. Course Metrics
-    courses_query = supabase.table("courses").select("id, title, course_registrations(count)").execute()
+    # ================== 1. Student Metrics ==================
+
+    # Total Active Students and Department Grouping (Fetch all relevant students once)
+    students_query = (
+        supabase.table("users")
+        .select("id, status, department, created_at")
+        .eq("role", UserRole.STUDENT)
+        .execute()
+    )
+    students = students_query.data
+
+    # Count: Total Active Students (Robust check using strip)
+    total_active_students = len([
+        s for s in students
+        if s.get("status") and s["status"].strip().lower() == "active"
+    ])
+
+    # Count: New Students (Last 30 days) - Performed via Supabase filter for reliability
+    new_students_count = (
+        supabase.table("users")
+        .select("id", count="exact")
+        .eq("role", UserRole.STUDENT)
+        .gte("created_at", thirty_days_ago_iso) # Using the clean ISO string
+        .execute()
+        .count
+    )
+
+    # Group by department
+    dept_counts = Counter(s.get("department") for s in students if s.get("department"))
+    students_by_dept = [
+        {"name": dept, "value": count}
+        for dept, count in dept_counts.items()
+    ]
+
+
+    # ================== 2. Course Metrics ==================
+
+    # Fetch courses with registration count
+    courses_query = (
+        supabase.table("courses")
+        .select("id, title, course_registrations(count)")
+        .execute()
+    )
     courses = courses_query.data
     total_courses = len(courses)
-    
-    # Most enrolled
-    courses_sorted = sorted(courses, key=lambda x: x.get('course_registrations', [{}])[0].get('count', 0), reverse=True)
-    most_enrolled = {
-        "title": courses_sorted[0]["title"] if courses_sorted else "N/A",
-        "count": courses_sorted[0].get('course_registrations', [{}])[0].get('count', 0) if courses_sorted else 0
-    }
-    
-    materials_count = supabase.table("course_materials").select("id", count="exact").execute().count
 
-    # 3. Payment Metrics
-    payments_query = supabase.table("course_payments").select("amount_paid, status, created_at").execute()
+    # Helper function to safely extract registration count
+    def extract_count(c):
+        reg = c.get("course_registrations")
+        if isinstance(reg, list) and reg and isinstance(reg[0], dict):
+            return reg[0].get("count", 0)
+        return 0
+
+    # Determine most enrolled course
+    courses_sorted = sorted(courses, key=extract_count, reverse=True)
+
+    most_enrolled = (
+        {
+            "title": courses_sorted[0]["title"],
+            "count": extract_count(courses_sorted[0]),
+        }
+        if courses_sorted else {"title": "N/A", "count": 0}
+    )
+
+    # Count total materials
+    materials_count = (
+        supabase.table("course_materials")
+        .select("id", count="exact")
+        .execute()
+        .count
+    )
+
+    # ================== 3. Payment Metrics ==================
+
+    # Fetch all payments
+    payments_query = (
+        supabase.table("course_payments")
+        .select("amount_paid, status, created_at")
+        .execute()
+    )
     payments = payments_query.data
-    
-    total_revenue = sum(p["amount_paid"] for p in payments if p["status"] == PaymentStatus.APPROVED)
-    pending_payments_count = len([p for p in payments if p["status"] == PaymentStatus.PENDING])
-    
-    # Revenue Trend (Last 6 months)
-    revenue_dynamics = []
+
+    # Calculate Total Revenue (Robust summing)
+    total_revenue = sum(
+        p.get("amount_paid", 0) or 0
+        for p in payments
+        if p.get("status") == PaymentStatus.APPROVED and p.get("amount_paid") is not None
+    )
+
+    # Count pending payments
+    pending_payments_count = len([
+        p for p in payments if p.get("status") == PaymentStatus.PENDING
+    ])
+
+    # Calculate Revenue Trend (Monthly Dynamics)
     month_map = {}
-    
+
     for p in payments:
-        if p["status"] == PaymentStatus.APPROVED:
-            date_obj = datetime.fromisoformat(p["created_at"].replace('Z', '+00:00'))
-            month_key = date_obj.strftime("%b") # e.g., "Jan"
-            month_map[month_key] = month_map.get(month_key, 0) + p["amount_paid"]
+        if p.get("status") == PaymentStatus.APPROVED:
+            dt = parse_dt(p["created_at"])
             
-    revenue_dynamics = [{"name": k, "amount": v} for k, v in month_map.items()]
+            if dt != datetime.min:
+                month_key = dt.strftime("%b")
+                amount = p.get("amount_paid") or 0
+                month_map[month_key] = month_map.get(month_key, 0) + amount
 
-    # 4. Activity
-    status_counts = Counter(s.get("status", "Unknown") for s in students)
-    overall_status_chart = [{"name": k, "value": v} for k, v in status_counts.items()]
+    # Sort months chronologically
+    current_year_months = [
+        datetime.strptime(str(m), '%m').strftime('%b') for m in range(1, 13)
+    ]
+    
+    revenue_dynamics = [
+        {"name": month, "amount": month_map.get(month, 0)}
+        for month in current_year_months
+        if month in month_map
+    ]
 
-    # FIX: Specify which relationship to use for 'users' table
-    # Use the foreign key name to disambiguate
-    latest_pending_payments = supabase.table("course_payments")\
-        .select("*, student:users!course_payments_student_id_fkey(full_name, reg_no), courses(course_code, title)")\
-        .eq("status", PaymentStatus.PENDING)\
-        .order("created_at", desc=True)\
-        .limit(5)\
-        .execute().data
-        
-    latest_announcements = supabase.table("announcements")\
-        .select("*")\
-        .order("created_at", desc=True)\
-        .limit(5)\
-        .execute().data
+    # ================== 4. Activity ==================
 
+    # Overall Status Chart (Student Status Distribution)
+    status_counts = Counter(
+        s.get("status", "Unknown").capitalize()
+        for s in students
+        if s.get("status")
+    )
+    overall_status_chart = [
+        {"name": k, "value": v}
+        for k, v in status_counts.items()
+    ]
+
+    # Latest pending payments (Simple fetch)
+    latest_pending_payments = (
+        supabase.table("course_payments")
+        .select("*") 
+        .eq("status", PaymentStatus.PENDING)
+        .order("created_at", desc=True)
+        .limit(5)
+        .execute()
+        .data
+    )
+
+    # Latest announcements
+    latest_announcements = (
+        supabase.table("announcements")
+        .select("*")
+        .order("created_at", desc=True)
+        .limit(5)
+        .execute()
+        .data
+    )
+
+    # ================== Final Return Structure ==================
     return {
         "student_metrics": {
             "total_active": total_active_students,
             "new_students_30d": new_students_count,
-            "by_department": students_by_dept
+            "by_department": students_by_dept,
         },
         "course_metrics": {
             "total_courses": total_courses,
             "most_enrolled": most_enrolled,
-            "total_materials": materials_count
+            "total_materials": materials_count,
         },
         "financial_metrics": {
             "total_revenue": total_revenue,
             "pending_count": pending_payments_count,
-            "revenue_trend": revenue_dynamics
+            "revenue_trend": revenue_dynamics,
         },
         "activity": {
             "status_distribution": overall_status_chart,
             "latest_pending_payments": latest_pending_payments,
-            "latest_announcements": latest_announcements
-        }
+            "latest_announcements": latest_announcements,
+        },
     }
 
 @app.get("/api/student/dashboard")

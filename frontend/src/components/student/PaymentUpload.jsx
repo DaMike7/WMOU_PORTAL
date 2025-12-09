@@ -77,15 +77,15 @@ export default function PaymentUpload({ course, onSuccess }) {
         <div className="space-y-2">
           <div className="flex justify-between">
             <span className="text-gray-600">Bank Name:</span>
-            <span className="font-semibold">First Bank of Nigeria</span>
+            <span className="font-semibold">Fidelity Bank</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Account Number:</span>
-            <span className="font-mono font-bold">1234567890</span>
+            <span className="font-mono font-bold">4010955962</span>
           </div>
           <div className="flex justify-between">
             <span className="text-gray-600">Account Name:</span>
-            <span className="font-semibold">WMOU Collections</span>
+            <span className="font-semibold">Nnewi School Of Economics</span>
           </div>
           <div className="flex justify-between border-t pt-2 mt-2">
             <span className="text-gray-600 font-medium">Amount:</span>
