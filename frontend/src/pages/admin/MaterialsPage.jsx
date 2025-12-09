@@ -284,7 +284,14 @@ const MaterialsPage = () => {
               className={primaryBtnStyle}
               style={{ backgroundColor: WMOuBlue }}
             >
-              {uploadMutation.isLoading ? 'Uploading...' : 'Upload Material'}
+              {uploadMutation.isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Uploading...</span>
+                </div>
+              ) : (
+                'Upload Material'
+              )}
             </button>
           </div>
         </form>
