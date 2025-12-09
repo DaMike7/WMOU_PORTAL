@@ -6,7 +6,7 @@ import Modal from '../../components/common/Modal';
 import { materialService } from '../../services/materialService';
 import { courseService } from '../../services/courseService';
 import { toast } from 'react-hot-toast';
-import { Upload, Trash2, Download, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, Trash2, Download, FileText, ChevronLeft, ChevronRight,Loader2 } from 'lucide-react';
 import { formatDateTime } from '../../utils/helpers';
 
 const WMOuBlue = '#1e3a5f';
