@@ -34,7 +34,7 @@ const MaterialsPage = () => {
 
   const { data: coursesData } = useQuery({
     queryKey: ['adminCourses'],
-    queryFn: () => courseService.getCourses(),
+    queryFn: () => courseService.getCoursesDropdown(),
   });
 
   const uploadMutation = useMutation({

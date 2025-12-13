@@ -22,6 +22,7 @@ import requests
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 from sqlalchemy.pool import NullPool
 from collections import Counter
+from functools import lru_cache
 
 load_dotenv()
 email_service = EmailService()
@@ -581,6 +582,30 @@ async def get_courses(
         "page": page,
         "limit": limit,
         "total_pages": total_pages
+    }
+
+
+@lru_cache(maxsize=1)
+def get_cached_courses():
+    response = (
+        supabase
+        .table("courses")
+        .select("id, title, course_code")
+        .order("title")
+        .execute()
+    )
+
+    if response.error:
+        raise Exception("Failed to fetch courses")
+
+    return response.data
+
+@app.get("/api/courses_dropdown")
+async def get_courses(
+    current_user: dict = Depends(get_current_user)
+):
+    return {
+        "data": get_cached_courses
     }
 
 @app.patch("/api/admin/courses/{course_id}")
