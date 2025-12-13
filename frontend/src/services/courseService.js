@@ -13,7 +13,7 @@ export const courseService = {
 
   getCoursesDropdown: async () => {
     const response = await api.get('/api/courses_dropdown');
-    return response.data;
+    return response.data.data;
   },
 
   getCoursesWithPaymentStatus: async (session, semester) => {
