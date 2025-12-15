@@ -34,14 +34,9 @@ export const DEPARTMENTS = [
   'Educational Management',
   'Business Management',
   'Economics',
-  'Finance',
   'Human Resource Management',
-  'Information Systems',
-  'Marketing',
   'Mass Communication',
-  'Office And Information Management',
   'Public Administration',
-  'Sociology'
 ];
 
 export const ADMIN_WHATSAPP_NUMBER = import.meta.env.VITE_ADMIN_WHATSAPP_NUMBER

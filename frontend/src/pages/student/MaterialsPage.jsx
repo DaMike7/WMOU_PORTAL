@@ -108,33 +108,35 @@ function CourseMaterialsCard({ registration }) {
         <p className="text-gray-500 text-sm py-4">No materials uploaded yet</p>
       ) : (
         <>
-          <div className="space-y-2">
-            {materialsData?.data?.map((material) => (
-              <div
-                key={material.id}
-                className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center space-x-3">
-                  <FileText className="h-5 w-5 text-gray-400" />
-                  <div>
-                    <p className="font-medium text-gray-900">{material.title}</p>
-                    <p className="text-xs text-gray-500">
-                      {formatDateTime(material.uploaded_at)}
-                    </p>
-                  </div>
+        <div className="space-y-3">
+          {materialsData?.data?.map((material) => (
+            <div
+              key={material.id}
+              className="flex items-center justify-between p-4 bg-white border-2 border-[#1e3a5f]/10 rounded-xl hover:border-[#1e3a5f]/30 hover:shadow-md transition-all group"
+            >
+              <div className="flex items-center space-x-4">
+                <div className="p-3 bg-[#1e3a5f]/10 rounded-lg group-hover:bg-[#1e3a5f]/20 transition-colors">
+                  <FileText className="h-6 w-6 text-[#1e3a5f]" />
                 </div>
-                <a
-                  href={material.file_url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#1e3a5f] hover:text-[#2d5a8f] p-2 hover:bg-blue-50 rounded"
-                  download
-                >
-                  <Download className="h-5 w-5" />
-                </a>
+                <div>
+                  <p className="font-semibold text-gray-900 mb-1">{material.title}</p>
+                  <p className="text-xs text-gray-500">
+                    Uploaded: {formatDateTime(material.uploaded_at)}
+                  </p>
+                </div>
               </div>
-            ))}
-          </div>
+              <a
+                href={material.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-3 bg-[#1e3a5f] text-white rounded-lg hover:bg-[#2d5a8f] transition-colors shadow-md hover:shadow-lg"
+                download
+              >
+                <Download className="h-5 w-5" />
+              </a>
+            </div>
+          ))}
+        </div>
 
           {/* Pagination for materials */}
           {materialsData?.total_pages > 1 && (
