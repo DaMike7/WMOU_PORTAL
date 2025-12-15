@@ -595,7 +595,7 @@ def get_cached_courses():
         .execute()
     )
 
-    if response.error:
+    if response.data is None:
         raise Exception("Failed to fetch courses")
 
     return response.data
@@ -605,7 +605,7 @@ async def get_courses(
     current_user: dict = Depends(get_current_user)
 ):
     return {
-        "data": get_cached_courses
+        "data": get_cached_courses()
     }
 
 @app.patch("/api/admin/courses/{course_id}")
