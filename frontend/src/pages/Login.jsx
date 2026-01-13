@@ -4,7 +4,6 @@ import { useAuthStore } from '../store/authStore';
 import { toast } from 'react-hot-toast';
 import { Mail, Lock, User } from 'lucide-react';
 import LoadingSpinner from '../components/common/LoadingSpinner';
-import Turnstile from "react-turnstile";
 import {WHATSAPP_LINK} from '../utils/constants.js'
 
 const Login = () => {
@@ -14,8 +13,6 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const { login } = useAuthStore();
   const navigate = useNavigate();
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const SITE_KEY = import.meta.env.VITE_CLOUDFARE_SITE_KEY
 
   const validateForm = () => {
     const newErrors = {};
@@ -40,16 +37,11 @@ const Login = () => {
     if (!validateForm()) {
       return;
     }
-
-    if (!turnstileToken) {
-      toast.error("Please complete the verification.");
-      return;
-    }
     
     setLoading(true);
 
     try {
-      const data = await login({ reg_no: regNo, password , turnstile_token: turnstileToken });
+      const data = await login({ reg_no: regNo, password });
       toast.success('Login successful!');
       
       if (data.user.role === 'admin') {
@@ -116,11 +108,6 @@ const Login = () => {
                 <p className="text-red-500 text-sm mt-1 ml-1">{errors.password}</p>
               )}
             </div>
-
-            <Turnstile
-              sitekey={SITE_KEY}
-              onSuccess={(token) => setTurnstileToken(token)}
-            />
 
             <div className="text-center">
               <button

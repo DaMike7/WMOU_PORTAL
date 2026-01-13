@@ -59,7 +59,6 @@ app.add_middleware(
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-TURNSTILE_ENABLED = os.getenv("TURNSTILE_ENABLED")
 
 # Validate before creating client
 if not SUPABASE_URL or not SUPABASE_KEY:
@@ -108,7 +107,6 @@ class Semester(str, Enum):
 class LoginRequest(BaseModel):
     reg_no: str
     password: str
-    turnstile_token: str
 
 class TokenResponse(BaseModel):
     access_token: str
@@ -187,6 +185,7 @@ class AnnouncementCreate(BaseModel):
     title: str
     content: str
     target_department: Optional[str] = None
+    turnstile_token: str
 
 # ============= HELPER FUNCTIONS =============
 
@@ -223,26 +222,6 @@ def create_access_token(data: dict, expires_delta: timedelta = timedelta(days=7)
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
 
-
-if TURNSTILE_ENABLED:
-    def verify_turnstile(token: str, remote_ip: str = None):
-        secret = os.getenv("CLOUDFLARE_SECRET_KEY")
-
-        url = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
-        payload = {
-            "secret": secret,
-            "response": token,
-        }
-
-        if remote_ip:
-            payload["remoteip"] = remote_ip
-
-        response = requests.post(url, data=payload)
-        result = response.json()
-
-        return result.get("success", False)
-else:
-    pass
 
 def decode_token(token: str):
     try:
@@ -281,10 +260,6 @@ def calculate_gpa(results: List[dict]) -> float:
 
 @app.post("/api/auth/login", response_model=TokenResponse)
 async def login(request: LoginRequest):
-    # Verify Turnstile 
-    if not verify_turnstile(request.turnstile_token):
-        raise HTTPException(status_code=400, detail="Turnstile verification failed")
-
     response = supabase.table("users").select("*").eq("reg_no", request.reg_no).execute()
     
     if not response.data:
