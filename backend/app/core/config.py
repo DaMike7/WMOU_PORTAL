@@ -6,10 +6,6 @@ class Settings(BaseSettings):
     supabase_key: str
     database_url: str
 
-    #cloudfare
-    cloudflare_site_key: str
-    cloudflare_secret_key: str
-    turnstile_enabled : bool
     
     # Security
     secret_key: str
